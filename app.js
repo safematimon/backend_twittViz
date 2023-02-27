@@ -13,7 +13,9 @@ mongoose.connect('mongodb+srv://admin:1234@cluster0.hv7pxi6.mongodb.net/?retryWr
         .catch((err) => console.error(err));
 
 const app = express();
+
 app.use(express.json());
+app.use(cors())
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan('dev'));
 
@@ -23,19 +25,26 @@ app.get('/', async (req, res, next) => {
 
 app.use('/api', require('./routes/api.route'));
 
-
 // not use
 app.use((req, res, next) => {
   next(createError.NotFound());
 });
 
-app.use(cors())
+// app.use(cors())
 
 // app.use((req, res, next) => {
 //   res.header('Access-Control-Allow-Origin', '*')
 //   res.header('Access-Control-Allow-Methods','POST, GET, PUT, PATCH, DELETE, OPTIONS')
 //   res.header('Access-Control-Allow-Headers','Content-Type, Option, Authorization')
-//   return next()
+//   next()
+// })
+
+// app.use((req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*');
+//   res.header(
+//     'Access-Control-Allow-Headers',
+//     'Origin, X-Requested-With, Content-Type, Accept');
+//   next();
 // })
 
 app.use((err, req, res, next) => {
