@@ -2,6 +2,7 @@ const express = require('express');
 const createError = require('http-errors');
 const morgan = require('morgan');
 const mongoose = require('mongoose')
+const cors = require('cors')
 require('dotenv').config();
 
 // mongoose
@@ -28,12 +29,14 @@ app.use((req, res, next) => {
   next(createError.NotFound());
 });
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*')
-  res.header('Access-Control-Allow-Methods','POST, GET, PUT, PATCH, DELETE, OPTIONS')
-  res.header('Access-Control-Allow-Headers','Content-Type, Option, Authorization')
-  return next()
-})
+app.use(cors())
+
+// app.use((req, res, next) => {
+//   res.header('Access-Control-Allow-Origin', '*')
+//   res.header('Access-Control-Allow-Methods','POST, GET, PUT, PATCH, DELETE, OPTIONS')
+//   res.header('Access-Control-Allow-Headers','Content-Type, Option, Authorization')
+//   return next()
+// })
 
 app.use((err, req, res, next) => {
   res.status(err.status || 500);
