@@ -3,11 +3,11 @@ const twitter= require('twitter')
 const twitterV2 = require('twitter-v2');
 const {languagesCode} = require('../mapping/languagesCode')
 
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
 // const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
-const { trusted } = require('mongoose');
+// const { trusted } = require('mongoose');
 
 
 // twitter v1 for trend
@@ -443,14 +443,6 @@ router.get('/tweets', async (req, res, next) => {
       console.log(`Latest created_at: ${latestTimestamp}`);
       console.log(`Oldest created_at: ${oldestTimestamp}`);
 
-      // console.log("size:",size)
-      // console.log("possibly_sensitive_count:",possibly_sensitive_count)
-      // console.log("replyCount:",replyCount)
-      // console.log("retweetCount:",retweetCount)
-      // console.log("tweetCount:",size-retweetCount-replyCount)
-
-      // console.log("photosCount:",photosCount)
-      // console.log("videosCount:",videosCount)
       console.log("pureTextCount:",pureTextCount)
       console.log(arr)
       console.log("1:",t1)
@@ -569,7 +561,7 @@ router.get('/past', async (req, res) => {
     //   formattedDate = formatLastDate(24)
     // }
 
-    console.log(formattedDate)
+    // console.log(formattedDate)
     const data = await Trend.find({ time: formattedDate });
     data.sort((a, b) => parseInt(a.no) - parseInt(b.no));
 
