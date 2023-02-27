@@ -4,7 +4,6 @@ const twitterV2 = require('twitter-v2');
 const {languagesCode} = require('../mapping/languagesCode')
 
 const mongoose = require('mongoose');
-const Product = require('../models/Product');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
 const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
