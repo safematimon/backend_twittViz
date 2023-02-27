@@ -2,7 +2,6 @@ const express = require('express');
 const createError = require('http-errors');
 const morgan = require('morgan');
 const mongoose = require('mongoose')
-const products = require('./routes/products')
 require('dotenv').config();
 
 // mongoose
@@ -37,8 +36,6 @@ app.get('/', async (req, res, next) => {
 
 app.use('/api', require('./routes/api.route'));
 // moongose here
-app.use('/products',products)
-
 
 app.use((req, res, next) => {
   next(createError.NotFound());
