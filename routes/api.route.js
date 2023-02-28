@@ -439,19 +439,19 @@ router.get('/tweets', async (req, res, next) => {
     // console.log Zone
     tweeType.size=size
     tweeType.tweet=size-tweeType.retweet-tweeType.reply
-    if(type==2){
-      console.log(`Latest created_at: ${latestTimestamp}`);
-      console.log(`Oldest created_at: ${oldestTimestamp}`);
+    // if(type==2){
+    //   console.log(`Latest created_at: ${latestTimestamp}`);
+    //   console.log(`Oldest created_at: ${oldestTimestamp}`);
 
-      console.log("pureTextCount:",pureTextCount)
-      console.log(arr)
-      console.log("1:",t1)
-      console.log("2:",t2)
-      console.log("3:",t3)
-      console.log("4:",t4)
-      console.log(">",tweeType)
-      // console.log(hashtagArray);
-    }
+    //   console.log("pureTextCount:",pureTextCount)
+    //   console.log(arr)
+    //   console.log("1:",t1)
+    //   console.log("2:",t2)
+    //   console.log("3:",t3)
+    //   console.log("4:",t4)
+    //   console.log(">",tweeType)
+    //   // console.log(hashtagArray);
+    // }
     // --------------------------------------------------------------------------------------------------------------------
     let possibly_sensitive_arr = [size,possibly_sensitive_count]
     // --------------------------------------------------------------------------------------------------------------------
@@ -529,7 +529,12 @@ cron.schedule('0 * * * *', async () => {
       if(err) return next(err);
     });
   });
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick',new Date(),">",formattedDate)
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick trend ',new Date(),">",formattedDate)
+});
+
+// 0 */45 * * * *
+cron.schedule('0 */10 * * * *', async () => {
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick 10 min')
 });
 
 
