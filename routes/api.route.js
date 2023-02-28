@@ -550,8 +550,8 @@ router.post('/update-trends', async (req, res, next) => {
       });
     });
 
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick trend ',new Date(),">",formattedDate);
-    
+    console.log('tick trend ',new Date(),">",formattedDate);
+
     res.status(200).send('Trends updated successfully');
   } catch (error) {
     console.error(error);
