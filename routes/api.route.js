@@ -552,7 +552,7 @@ router.get('/update-trends', async (req, res, next) => {
 
     console.log('tick trend ',new Date(),">",formattedDate);
 
-    res.status(200).send('Trends updated successfully');
+    res.status(200).send(data);
   } catch (error) {
     console.error(error);
     res.status(500).send('Error updating trends');
