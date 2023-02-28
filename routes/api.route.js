@@ -439,19 +439,19 @@ router.get('/tweets', async (req, res, next) => {
     // console.log Zone
     tweeType.size=size
     tweeType.tweet=size-tweeType.retweet-tweeType.reply
-    // if(type==2){
-    //   console.log(`Latest created_at: ${latestTimestamp}`);
-    //   console.log(`Oldest created_at: ${oldestTimestamp}`);
+    if(type==2){
+      console.log(`Latest created_at: ${latestTimestamp}`);
+      console.log(`Oldest created_at: ${oldestTimestamp}`);
 
-    //   console.log("pureTextCount:",pureTextCount)
-    //   console.log(arr)
-    //   console.log("1:",t1)
-    //   console.log("2:",t2)
-    //   console.log("3:",t3)
-    //   console.log("4:",t4)
-    //   console.log(">",tweeType)
-    //   // console.log(hashtagArray);
-    // }
+      console.log("pureTextCount:",pureTextCount)
+      console.log(arr)
+      console.log("1:",t1)
+      console.log("2:",t2)
+      console.log("3:",t3)
+      console.log("4:",t4)
+      console.log(">",tweeType)
+      // console.log(hashtagArray);
+    }
     // --------------------------------------------------------------------------------------------------------------------
     let possibly_sensitive_arr = [size,possibly_sensitive_count]
     // --------------------------------------------------------------------------------------------------------------------
@@ -511,30 +511,66 @@ router.get('/test', async (req, res, next) => {
   res.send({ message: 'test api OK is working 🚀' });
 });
 
-cron.schedule('0 * * * *', async () => {
-  // console.log('running a task every hour');
-  // cron.schedule('*/10 * * * *', async () => {
-  const id = 1
-  const data = await client.get('trends/place.json', {id})
+// cron.schedule('0 * * * *', async () => {
+//   // console.log('running a task every hour');
+//   // cron.schedule('*/10 * * * *', async () => {
+//   const id = 1
+//   const data = await client.get('trends/place.json', {id})
 
-  const date = new Date();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear().toString();
-  const formattedDate = `${hours}/${day}/${month}/${year}`;
+//   const date = new Date();
+//   const hours = date.getHours().toString().padStart(2, '0');
+//   const day = date.getDate().toString().padStart(2, '0');
+//   const month = (date.getMonth() + 1).toString().padStart(2, '0');
+//   const year = date.getFullYear().toString();
+//   const formattedDate = `${hours}/${day}/${month}/${year}`;
 
-  data[0].trends.forEach((trend, index) => {
-    Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
-      if(err) return next(err);
+//   data[0].trends.forEach((trend, index) => {
+//     Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
+//       if(err) return next(err);
+//     });
+//   });
+//     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick',new Date(),">",formattedDate)
+// });
+
+router.post('/update-trends', async (req, res, next) => {
+  try {
+    const id = 1
+    const data = await client.get('trends/place.json', {id})
+
+    const date = new Date();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString();
+    const formattedDate = `${hours}/${day}/${month}/${year}`;
+
+    data[0].trends.forEach((trend, index) => {
+      Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
+        if(err) return next(err);
+      });
     });
-  });
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick trend ',new Date(),">",formattedDate)
+
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick trend ',new Date(),">",formattedDate);
+    
+    res.status(200).send('Trends updated successfully');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error updating trends');
+  }
 });
 
-// 0 */45 * * * *
-cron.schedule('0 */10 * * * *', async () => {
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick 10 min')
+router.get('/test-cron', async (req, res, next) => {
+  try{
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>cron');
+    res.send({ message: 'path api OK is working 🚀' });
+  }catch(error){
+    next(error)
+  }
+});
+
+router.get('/cron', async (req, res, next) => {
+  console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> test-cron ',new Date(),">",formattedDate);
+  res.send({ message: 'path api OK is working 🚀' });
 });
 
 
