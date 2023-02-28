@@ -3,7 +3,7 @@ const twitter= require('twitter')
 const twitterV2 = require('twitter-v2');
 const {languagesCode} = require('../mapping/languagesCode')
 
-// const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
 // const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
@@ -511,7 +511,7 @@ router.get('/test', async (req, res, next) => {
   res.send({ message: 'test api OK is working 🚀' });
 });
 
-// cron.schedule('0 * * * *', async () => {
+// cron.schedule('15 */1 * * *', async () => {
 //   // console.log('running a task every hour');
 //   // cron.schedule('*/10 * * * *', async () => {
 //   const id = 1
@@ -532,7 +532,7 @@ router.get('/test', async (req, res, next) => {
 //     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick',new Date(),">",formattedDate)
 // });
 
-router.post('/update-trends', async (req, res, next) => {
+router.get('/update-trends', async (req, res, next) => {
   try {
     const id = 1
     const data = await client.get('trends/place.json', {id})

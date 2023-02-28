@@ -57,10 +57,7 @@ app.use((err, req, res, next) => {
 
 // const PORT = process.env.PORT || 3000;
 // app.listen(PORT, () => console.log(`🚀 @ http://localhost:${PORT}`));
-app.listen(4000, () => {
-  console.log('running on port 4000');
-});
 
-// server.listen(4000,()=>{
-//   console.log('listening on port 4000')
-// })
+// app.listen(4000, () => {
+//   console.log('running on port 4000');
+// });
