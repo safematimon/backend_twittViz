@@ -602,7 +602,7 @@ router.get('/past', async (req, res) => {
     //   formattedDate = formatLastDate(24)
     // }
 
-    // console.log(formattedDate)
+    console.log(formattedDate)
     const data = await Trend.find({ time: formattedDate });
     data.sort((a, b) => parseInt(a.no) - parseInt(b.no));
 
