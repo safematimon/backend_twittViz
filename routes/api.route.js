@@ -59,6 +59,8 @@ router.get('/tweets', async (req, res, next) => {
     const context_entity= {}
     
     let data
+    let change_sort_order = true
+    let next
     let relevancy_next
 
     let highestRetweetCountId = "";
@@ -72,12 +74,11 @@ router.get('/tweets', async (req, res, next) => {
 
     let latestTimestamp;
     let oldestTimestamp;
-
-    let possibly_sensitive_count = 0;
+    let possibly_sensitive_count=0;
 
     // default i=1
     if(type == 1){
-      console.log("type : ",type)
+      console.log("init")
         let params3 = {
           'query': queryTemp2,
           'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
@@ -91,152 +92,6 @@ router.get('/tweets', async (req, res, next) => {
 
         tweeType.size = tweeType.size + data.data.length
 
-        for (let tweet of data.data){
-
-          if(tweet.in_reply_to_user_id){
-            tweeType.reply++;
-          }
-          
-          const regexRT = /RT @/g;
-          if(tweet.text.match(regexRT)){
-            tweeType.retweet++;
-          }
-
-          text = text.concat(' ',tweet.text)
-          public_metrics.retweet_count += tweet.public_metrics.retweet_count
-          public_metrics.reply_count += tweet.public_metrics.reply_count
-          public_metrics.like_count += tweet.public_metrics.like_count
-          public_metrics.quote_count += tweet.public_metrics.quote_count
-          // source not available no twitter api
-          // if(tweet.source == "Twitter for Android"){
-          //   source.Twitter_for_Android += 1
-          // }
-          // else if(tweet.source == "Twitter for iPhone"){
-          //   source.Twitter_for_iPhone += 1
-          // }
-          // else if(tweet.source == "Twitter for iPad"){
-          //   source.Twitter_for_iPad += 1
-          // }
-          // else if(tweet.source == "Twitter Web App"){
-          //   source.Twitter_Web_App += 1
-          // }
-          // else{ source.else += 1}
-          if(tweet.lang in lang){
-            lang[tweet.lang] += 1
-          }
-          else{
-            lang[tweet.lang] = 1
-          }
-          if(tweet.context_annotations != undefined){
-            for(let y of tweet.context_annotations){
-              if(y.domain.name in context_domain){
-                context_domain[y.domain.name] += 1
-              }
-              else{
-                context_domain[y.domain.name] = 1
-              }
-              if(y.entity.name in context_entity){
-                context_entity[y.entity.name] += 1
-              }
-              else{
-                context_entity[y.entity.name] = 1
-              }
-            }
-          }
-          if (tweet.public_metrics.retweet_count >= highestRetweetCount) {
-            highestRetweetCount = tweet.public_metrics.retweet_count;
-            highestRetweetCountId = tweet.id;
-            t1=tweet.public_metrics;
-          }
-          if (tweet.public_metrics.like_count >= highestLikeCount) {
-            highestLikeCount = tweet.public_metrics.like_count;
-            highestLikeCountId = tweet.id;
-            t2=tweet.public_metrics;
-          }
-          if (tweet.public_metrics.reply_count >= highestReplyCount) {
-            highestReplyCount = tweet.public_metrics.reply_count;
-            highestReplyCountId = tweet.id;
-            t3=tweet.public_metrics;
-          }
-          if (tweet.public_metrics.impression_count >= highestImpressionCount) {
-            highestImpressionCount = tweet.public_metrics.impression_count;
-            highestImpressionCountId = tweet.id;
-            t4=tweet.public_metrics;
-          }
-          // check time created_at
-          let timestamp = new Date(tweet.created_at);
-          if (timestamp > latestTimestamp) {
-            latestTimestamp = timestamp;
-          }
-          if (timestamp < oldestTimestamp) {
-            oldestTimestamp = timestamp;
-          }
-          
-          if(tweet.possibly_sensitive == true){
-            possibly_sensitive_count += 1;
-          }
-        }
-        // for media
-        for (let tweet of data.includes.media){
-          if (tweet.type === "photo") {
-            tweeType.photosCount++;
-          } else if (tweet.type === "video") {
-            tweeType.videosCount++;
-          }
-        }
-
-    }
-    else{
-      console.log("type : ",type)
-      for (let i = 1; i<=10; i++) {
-        if(i==1){
-          console.log('i = 1')
-          let params = {
-            'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
-            'max_results': 100,
-            'sort_order': 'relevancy',
-            'expansions': 'attachments.media_keys',
-          }
-          data = await clientV3.get(`tweets/search/recent`,params);
-
-          oldestTimestamp = new Date(data.data[0].created_at);
-          latestTimestamp = new Date(data.data[0].created_at);
-
-          highestRetweetCount = data.data[0].public_metrics.retweet_count;
-          highestLikeCount = data.data[0].public_metrics.like_count;
-          highestReplyCount = data.data[0].public_metrics.reply_count;
-          highestImpressionCount = data.data[0].public_metrics.impression_count;
-        }
-        else if(relevancy_next){
-          console.log('i =',i)
-          let params2 = {
-            'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
-            'max_results': 100,
-            'sort_order': 'relevancy',
-            'expansions': 'attachments.media_keys',
-            'next_token': relevancy_next
-          }
-          data = await clientV3.get(`tweets/search/recent`,params2);
-          // console.log(">",data.meta)
-          
-          // console.log(data)
-          // if(data.data){
-          //   console.log("checked data.data ",i)
-          // }
-          // else{
-          //   console.log("no data.data ",i)
-          // }
-        }
-        else{
-          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
-          break;
-        }
-        relevancy_next = data.meta.next_token
-
-        tweeType.size = tweeType.size + data.data.length
-        //here loop preprd 
         for (let tweet of data.data){
 
           if(tweet.in_reply_to_user_id){
@@ -326,16 +181,184 @@ router.get('/tweets', async (req, res, next) => {
             possibly_sensitive_count += 1;
           }
         }
-      // dont
-      }
-      // for media
-      for (let tweet of data.includes.media){
-        if (tweet.type === "photo") {
-          tweeType.photosCount++;
-        } else if (tweet.type === "video") {
-          tweeType.videosCount++;
+        // for media
+        for (let tweet of data.includes.media){
+          if (tweet.type === "photo") {
+            tweeType.photosCount++;
+          } else if (tweet.type === "video") {
+            tweeType.videosCount++;
+          }
+        }
+    }
+    else{
+      for (let i = 1; i<=10; i++) {
+        if(i==1){
+          console.log('i = 1')
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'max_results': 100,
+            'sort_order': 'relevancy',
+            'expansions': 'attachments.media_keys',
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          relevancy_next = data.meta.next_token
+
+          oldestTimestamp = new Date(data.data[0].created_at);
+          latestTimestamp = new Date(data.data[0].created_at);
+
+          highestRetweetCount = data.data[0].public_metrics.retweet_count;
+          highestLikeCount = data.data[0].public_metrics.like_count;
+          highestReplyCount = data.data[0].public_metrics.reply_count;
+          highestImpressionCount = data.data[0].public_metrics.impression_count;
+        }
+        else if(relevancy_next){
+          console.log('i =',i)
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'max_results': 100,
+            'sort_order': 'relevancy',
+            'expansions': 'attachments.media_keys',
+            'next_token': relevancy_next
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          relevancy_next = data.meta.next_token
+        }
+        // else if(change_sort_order){
+        //   console.log('first next')
+        //   let params = {
+        //     'query': queryTemp2,
+        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+        //     'max_results': 100,
+        //     'expansions': 'attachments.media_keys',
+        //   }
+        //   data = await clientV3.get(`tweets/search/recent`,params);
+        //   next = data.meta.next_token
+        //   change_sort_order = false
+        // }
+        // else if(next && tweeType.size<=1000){
+        //   console.log('next =',i)
+        //   let params = {
+        //     'query': queryTemp2,
+        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+        //     'max_results': 100,
+        //     'expansions': 'attachments.media_keys',
+        //     'next_token': next
+        //   }
+        //   data = await clientV3.get(`tweets/search/recent`,params);
+        //   next = data.meta.next_token
+        // }
+        else{
+          console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
+          break;
+        }
+        // console.log(data)
+        tweeType.size = tweeType.size + data.data.length
+        //here loop prepro
+        for (let tweet of data.data){
+          if(tweet.in_reply_to_user_id){
+            tweeType.reply++;
+          }
+          const regexRT = /RT @/g;
+          if(tweet.text.match(regexRT)){
+            tweeType.retweet++;
+          }
+          if(tweet.attachments){
+            tweeType.media++;
+          }
+          text = text.concat(' ',tweet.text)
+          public_metrics.retweet_count += tweet.public_metrics.retweet_count
+          public_metrics.reply_count += tweet.public_metrics.reply_count
+          public_metrics.like_count += tweet.public_metrics.like_count
+          public_metrics.quote_count += tweet.public_metrics.quote_count
+          // source not available no twitter api
+          // if(tweet.source == "Twitter for Android"){
+          //   source.Twitter_for_Android += 1
+          // }
+          // else if(tweet.source == "Twitter for iPhone"){
+          //   source.Twitter_for_iPhone += 1
+          // }
+          // else if(tweet.source == "Twitter for iPad"){
+          //   source.Twitter_for_iPad += 1
+          // }
+          // else if(tweet.source == "Twitter Web App"){
+          //   source.Twitter_Web_App += 1
+          // }
+          // else{ source.else += 1}
+          if(tweet.lang in lang){
+            lang[tweet.lang] += 1
+          }
+          else{
+            lang[tweet.lang] = 1
+          }
+          if(tweet.context_annotations != undefined){
+            for(let y of tweet.context_annotations){
+              if(y.domain.name in context_domain){
+                context_domain[y.domain.name] += 1
+              }
+              else{
+                context_domain[y.domain.name] = 1
+              }
+              if(y.entity.name in context_entity){
+                context_entity[y.entity.name] += 1
+              }
+              else{
+                context_entity[y.entity.name] = 1
+              }
+            }
+          }
+          if (tweet.public_metrics.retweet_count >= highestRetweetCount) {
+            highestRetweetCount = tweet.public_metrics.retweet_count;
+            highestRetweetCountId = tweet.id;
+            t1=tweet.public_metrics;
+          }
+          if (tweet.public_metrics.like_count >= highestLikeCount) {
+            highestLikeCount = tweet.public_metrics.like_count;
+            highestLikeCountId = tweet.id;
+            t2=tweet.public_metrics;
+          }
+          if (tweet.public_metrics.reply_count >= highestReplyCount) {
+            highestReplyCount = tweet.public_metrics.reply_count;
+            highestReplyCountId = tweet.id;
+            t3=tweet.public_metrics;
+          }
+          if (tweet.public_metrics.impression_count >= highestImpressionCount) {
+            highestImpressionCount = tweet.public_metrics.impression_count;
+            highestImpressionCountId = tweet.id;
+            t4=tweet.public_metrics;
+          }
+          // check time created_at
+          let timestamp = new Date(tweet.created_at);
+          if (timestamp > latestTimestamp) {
+            latestTimestamp = timestamp;
+          }
+          if (timestamp < oldestTimestamp) {
+            oldestTimestamp = timestamp;
+          }
+          
+          if(tweet.possibly_sensitive == true){
+            possibly_sensitive_count += 1;
+          }
+        }
+
+        // for media
+        for (let tweet of data.includes.media){
+          if (tweet.type === "photo") {
+            tweeType.photosCount++;
+          } else if (tweet.type === "video") {
+            tweeType.videosCount++;
+          }
         }
       }
+      // // for media
+      // for (let tweet of data.includes.media){
+      //   if (tweet.type === "photo") {
+      //     tweeType.photosCount++;
+      //   } else if (tweet.type === "video") {
+      //     tweeType.videosCount++;
+      //   }
+      // }
     }
     // --------------------------------------------------------------------------------------------------------------------
     // text processing zone
@@ -423,15 +446,6 @@ router.get('/tweets', async (req, res, next) => {
     if(type==2){
       console.log(`Latest created_at: ${latestTimestamp}`);
       console.log(`Oldest created_at: ${oldestTimestamp}`);
-
-    //   console.log("pureTextCount:",pureTextCount)
-    //   console.log(arr)
-    //   console.log("1:",t1)
-    //   console.log("2:",t2)
-    //   console.log("3:",t3)
-    //   console.log("4:",t4)
-    //   console.log(">",tweeType)
-    //   // console.log(hashtagArray);
     }
     // --------------------------------------------------------------------------------------------------------------------
     let dataplus = {}
@@ -553,7 +567,7 @@ router.get('/update-trends', async (req, res, next) => {
     // }).catch(function(error){
         // console.log(error)      // Failure
     // });
-    
+
     res.status(200).send("inserted");
   } catch (error) {
     console.error(error);
