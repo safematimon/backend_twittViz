@@ -217,7 +217,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('i = 1')
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
             'max_results': 100,
             'sort_order': 'relellvancy',
             'expansions': 'attachments.media_keys',
@@ -238,7 +238,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('i =',i)
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
             'max_results': 100,
             'sort_order': 'relevancy',
             'expansions': 'attachments.media_keys',
@@ -270,6 +270,10 @@ router.get('/tweets', async (req, res, next) => {
           const regexRT = /RT @/g;
           if(tweet.text.match(regexRT)){
             tweeType.retweet++;
+          }
+
+          if(tweet.attachments){
+            console.log("have attachments")
           }
 
           // if(tweet.entities){
@@ -522,6 +526,35 @@ router.get('/test', async (req, res, next) => {
 //     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick',new Date(),">",formattedDate)
 // });
 
+// old
+// router.get('/update-trends', async (req, res, next) => {
+//   try {
+//     const id = 1
+//     const data = await client.get('trends/place.json', {id})
+
+//     const date = new Date();
+//     const hours = date.getHours().toString().padStart(2, '0');
+//     const day = date.getDate().toString().padStart(2, '0');
+//     const month = (date.getMonth() + 1).toString().padStart(2, '0');
+//     const year = date.getFullYear().toString();
+//     const formattedDate = `${hours}/${day}/${month}/${year}`;
+
+//     data[0].trends.forEach((trend, index) => {
+//       Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
+//         console.log("create:",index+1)
+//         if(err) return next(err);
+//       });
+//     });
+
+//     console.log('tick trend ',new Date(),">",formattedDate);
+//     // console.log(data);
+//     res.status(200).send(data);
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).send('Error updating trends');
+//   }
+// });
+// test create many
 router.get('/update-trends', async (req, res, next) => {
   try {
     const id = 1
@@ -533,17 +566,20 @@ router.get('/update-trends', async (req, res, next) => {
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
     const year = date.getFullYear().toString();
     const formattedDate = `${hours}/${day}/${month}/${year}`;
+    
+    const datatemp = data[0].trends
 
-    data[0].trends.forEach((trend, index) => {
-      Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
-        console.log("create:",index+1)
-        if(err) return next(err);
-      });
+    datatemp.forEach((item, index) => {
+      item.time = formattedDate;
+      item.no = index+1;
     });
 
-    console.log('tick trend ',new Date(),">",formattedDate);
-    // console.log(data);
-    res.status(200).send(data);
+    Trend.insertMany(datatemp).then(function(){
+        console.log("Data inserted")  // Success
+    }).catch(function(error){
+        console.log(error)      // Failure
+    });
+    res.status(200).send("inserted");
   } catch (error) {
     console.error(error);
     res.status(500).send('Error updating trends');
