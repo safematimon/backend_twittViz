@@ -47,30 +47,19 @@ router.get('/tweets', async (req, res, next) => {
     const query = req.query.query
     const type = req.query.type
     const queryTemp = query.replace(/[ ]/g,"+")
-    const queryTemp2 = queryTemp+" -rt"
-    // let params = {
-      // 'query': queryTemp,
-      // 'tweet.fields': "created_at,lang,public_metrics,source,context_annotations",
-      // set result here
-      // 'max_results': 100,
-      // to find popular
-      // 'sort_order': 'relevancy',
-      // 'expansions': "geo.place_id",
-    // }
-    // let data = await clientV2.get(`tweets/search/recent`,params);
+    // const queryTemp2 = query.replace(/[ ]/g,"+")
+    const queryTemp2 = queryTemp+" -is:retweet"
 
     let text = ''
     const public_metrics= {retweet_count: 0, reply_count: 0, like_count: 0, quote_count: 0};
     const source= {Twitter_for_iPhone: 0, Twitter_for_Android: 0, Twitter_Web_App: 0, Twitter_for_iPad: 0, else: 0};
-    const tweeType= {size: 0,tweet: 0, retweet: 0, reply: 0,photosCount: 0,videosCount: 0};
+    const tweeType= {size: 0,tweet: 0, retweet: 0, reply: 0,media: 0,photosCount: 0,videosCount: 0};
     const lang= {}
     const context_domain= {}
     const context_entity= {}
     
     let data
     let relevancy_next
-    let size = 0;
-    let t1,t2,t3,t4
 
     let highestRetweetCountId = "";
     let highestLikeCountId = "";
@@ -84,14 +73,6 @@ router.get('/tweets', async (req, res, next) => {
     let latestTimestamp;
     let oldestTimestamp;
 
-    let photosCount = 0;
-    let videosCount = 0;
-    let pureTextCount = 0;
-    let hashtagCount = 0;
-    let replyCount = 0;
-    let retweetCount = 0;
-    // let 
-
     let possibly_sensitive_count = 0;
 
     // default i=1
@@ -99,19 +80,18 @@ router.get('/tweets', async (req, res, next) => {
       console.log("type : ",type)
         let params3 = {
           'query': queryTemp2,
-          'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
+          'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
           'max_results': 100,
           'sort_order': 'relevancy',
           'expansions': 'attachments.media_keys',
         }
         // old is clientV2 not work with -rt 
+        // data = await clientV2.get(`tweets/search/recent`,params3);
         data = await clientV3.get(`tweets/search/recent`,params3);
-        size = size + data.data.length
+
+        tweeType.size = tweeType.size + data.data.length
 
         for (let tweet of data.data){
-          if(!tweet.attachments){
-            pureTextCount++;
-          }
 
           if(tweet.in_reply_to_user_id){
             tweeType.reply++;
@@ -121,10 +101,6 @@ router.get('/tweets', async (req, res, next) => {
           if(tweet.text.match(regexRT)){
             tweeType.retweet++;
           }
-
-          // if(tweet.entities){
-          //   hashtagCount++;
-          // }
 
           text = text.concat(' ',tweet.text)
           public_metrics.retweet_count += tweet.public_metrics.retweet_count
@@ -219,12 +195,10 @@ router.get('/tweets', async (req, res, next) => {
             'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
             'max_results': 100,
-            'sort_order': 'relellvancy',
+            'sort_order': 'relevancy',
             'expansions': 'attachments.media_keys',
           }
-          // data = await clientV2.get(`tweets/search/recent`,params); 
-          data = await clientV3.get(`tweets/search/recent`,params); 
-          size = size + data.data.length
+          data = await clientV3.get(`tweets/search/recent`,params);
 
           oldestTimestamp = new Date(data.data[0].created_at);
           latestTimestamp = new Date(data.data[0].created_at);
@@ -236,7 +210,7 @@ router.get('/tweets', async (req, res, next) => {
         }
         else if(relevancy_next){
           console.log('i =',i)
-          let params = {
+          let params2 = {
             'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
             'max_results': 100,
@@ -244,24 +218,26 @@ router.get('/tweets', async (req, res, next) => {
             'expansions': 'attachments.media_keys',
             'next_token': relevancy_next
           }
-          // data = await clientV2.get(`tweets/search/recent`,params);
-          data = await clientV3.get(`tweets/search/recent`,params);
-          size = size + data.data.length
-          // console.log(data.data.length)
-          // console.log(">>",data.includes.places)
+          data = await clientV3.get(`tweets/search/recent`,params2);
+          // console.log(">",data.meta)
+          
+          // console.log(data)
+          // if(data.data){
+          //   console.log("checked data.data ",i)
+          // }
+          // else{
+          //   console.log("no data.data ",i)
+          // }
         }
         else{
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
           break;
         }
-        
         relevancy_next = data.meta.next_token
 
+        tweeType.size = tweeType.size + data.data.length
+        //here loop preprd 
         for (let tweet of data.data){
-
-          if(!tweet.attachments){
-            pureTextCount++;
-          }
 
           if(tweet.in_reply_to_user_id){
             tweeType.reply++;
@@ -273,12 +249,8 @@ router.get('/tweets', async (req, res, next) => {
           }
 
           if(tweet.attachments){
-            console.log("have attachments")
+            tweeType.media++;
           }
-
-          // if(tweet.entities){
-          //   hashtagCount++;
-          // }
 
           text = text.concat(' ',tweet.text)
           public_metrics.retweet_count += tweet.public_metrics.retweet_count
@@ -354,6 +326,7 @@ router.get('/tweets', async (req, res, next) => {
             possibly_sensitive_count += 1;
           }
         }
+      // dont
       }
       // for media
       for (let tweet of data.includes.media){
@@ -445,8 +418,8 @@ router.get('/tweets', async (req, res, next) => {
     let arr = [highestRetweetCountId, highestLikeCountId, highestReplyCountId ,highestImpressionCountId];
     // --------------------------------------------------------------------------------------------------------------------
     // console.log Zone
-    tweeType.size=size
-    tweeType.tweet=size-tweeType.retweet-tweeType.reply
+    // tweeType.size=size
+    tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply
     if(type==2){
       console.log(`Latest created_at: ${latestTimestamp}`);
       console.log(`Oldest created_at: ${oldestTimestamp}`);
@@ -461,8 +434,6 @@ router.get('/tweets', async (req, res, next) => {
     //   // console.log(hashtagArray);
     }
     // --------------------------------------------------------------------------------------------------------------------
-    let possibly_sensitive_arr = [size,possibly_sensitive_count]
-    // --------------------------------------------------------------------------------------------------------------------
     let dataplus = {}
     dataplus = data
     dataplus['public_metrics'] = public_metrics
@@ -473,7 +444,7 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['context'] = context_DomainArr
     dataplus['popular3'] = arr
     dataplus['tweettype'] = tweeType
-    dataplus['sensitive'] = possibly_sensitive_arr
+    // dataplus['sensitive'] = possibly_sensitive_arr
     res.send(dataplus);
   }catch(error){
     console.log(error)
@@ -574,11 +545,15 @@ router.get('/update-trends', async (req, res, next) => {
       item.no = index+1;
     });
 
-    Trend.insertMany(datatemp).then(function(){
-        console.log("Data inserted")  // Success
-    }).catch(function(error){
-        console.log(error)      // Failure
-    });
+    Trend.insertMany(datatemp)
+    console.log("Data inserted",new Date(),">",formattedDate)  // Success
+    
+    // .then(function(){
+        // console.log("Data inserted",new Date(),">",formattedDate)  // Success
+    // }).catch(function(error){
+        // console.log(error)      // Failure
+    // });
+    
     res.status(200).send("inserted");
   } catch (error) {
     console.error(error);
