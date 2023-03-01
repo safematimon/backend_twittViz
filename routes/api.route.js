@@ -47,6 +47,7 @@ router.get('/tweets', async (req, res, next) => {
     const query = req.query.query
     const type = req.query.type
     const queryTemp = query.replace(/[ ]/g,"+")
+    const queryTemp2 = queryTemp+" -rt"
     // let params = {
       // 'query': queryTemp,
       // 'tweet.fields': "created_at,lang,public_metrics,source,context_annotations",
@@ -97,13 +98,14 @@ router.get('/tweets', async (req, res, next) => {
     if(type == 1){
       console.log("type : ",type)
         let params3 = {
-          'query': queryTemp,
+          'query': queryTemp2,
           'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
           'max_results': 100,
           'sort_order': 'relevancy',
           'expansions': 'attachments.media_keys',
         }
-        data = await clientV2.get(`tweets/search/recent`,params3);
+        // old is clientV2 not work with -rt 
+        data = await clientV3.get(`tweets/search/recent`,params3);
         size = size + data.data.length
 
         for (let tweet of data.data){
@@ -214,13 +216,14 @@ router.get('/tweets', async (req, res, next) => {
         if(i==1){
           console.log('i = 1')
           let params = {
-            'query': queryTemp,
+            'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
             'max_results': 100,
-            'sort_order': 'relevancy',
+            'sort_order': 'relellvancy',
             'expansions': 'attachments.media_keys',
           }
-          data = await clientV2.get(`tweets/search/recent`,params); 
+          // data = await clientV2.get(`tweets/search/recent`,params); 
+          data = await clientV3.get(`tweets/search/recent`,params); 
           size = size + data.data.length
 
           oldestTimestamp = new Date(data.data[0].created_at);
@@ -234,14 +237,15 @@ router.get('/tweets', async (req, res, next) => {
         else if(relevancy_next){
           console.log('i =',i)
           let params = {
-            'query': queryTemp,
+            'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id",
             'max_results': 100,
             'sort_order': 'relevancy',
             'expansions': 'attachments.media_keys',
             'next_token': relevancy_next
           }
-          data = await clientV2.get(`tweets/search/recent`,params);
+          // data = await clientV2.get(`tweets/search/recent`,params);
+          data = await clientV3.get(`tweets/search/recent`,params);
           size = size + data.data.length
           // console.log(data.data.length)
           // console.log(">>",data.includes.places)
@@ -439,9 +443,9 @@ router.get('/tweets', async (req, res, next) => {
     // console.log Zone
     tweeType.size=size
     tweeType.tweet=size-tweeType.retweet-tweeType.reply
-    // if(type==2){
-    //   console.log(`Latest created_at: ${latestTimestamp}`);
-    //   console.log(`Oldest created_at: ${oldestTimestamp}`);
+    if(type==2){
+      console.log(`Latest created_at: ${latestTimestamp}`);
+      console.log(`Oldest created_at: ${oldestTimestamp}`);
 
     //   console.log("pureTextCount:",pureTextCount)
     //   console.log(arr)
@@ -451,7 +455,7 @@ router.get('/tweets', async (req, res, next) => {
     //   console.log("4:",t4)
     //   console.log(">",tweeType)
     //   // console.log(hashtagArray);
-    // }
+    }
     // --------------------------------------------------------------------------------------------------------------------
     let possibly_sensitive_arr = [size,possibly_sensitive_count]
     // --------------------------------------------------------------------------------------------------------------------
@@ -468,6 +472,7 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['sensitive'] = possibly_sensitive_arr
     res.send(dataplus);
   }catch(error){
+    console.log(error)
     next(error)
   }
 });
@@ -487,21 +492,6 @@ router.get('/counts', async (req, res, next) => {
     next(error)
   }
 });
-
-// test pop 
-// router.get('/counts', async (req, res, next) => {
-//   try{
-//     const query = req.query.query
-//     const params = {
-//       'query': query,
-//       'granularity' : 'day',
-//     }
-//     const data = await clientV3.get(`tweets/counts/recent`,params);
-//     res.send(data);
-//   }catch(error){
-//     next(error)
-//   }
-// });
 
 router.get('/', async (req, res, next) => {
   res.send({ message: 'path api OK is working 🚀' });
@@ -546,12 +536,13 @@ router.get('/update-trends', async (req, res, next) => {
 
     data[0].trends.forEach((trend, index) => {
       Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
+        console.log("create:",index+1)
         if(err) return next(err);
       });
     });
 
     console.log('tick trend ',new Date(),">",formattedDate);
-    console.log(data);
+    // console.log(data);
     res.status(200).send(data);
   } catch (error) {
     console.error(error);
@@ -561,18 +552,12 @@ router.get('/update-trends', async (req, res, next) => {
 
 router.get('/test-cron', async (req, res, next) => {
   try{
-    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>cron');
+    console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> test-cron ',new Date(),">",formattedDate);
     res.send({ message: 'path api OK is working 🚀' });
   }catch(error){
     next(error)
   }
 });
-
-router.get('/cron', async (req, res, next) => {
-  console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> test-cron ',new Date(),">",formattedDate);
-  res.send({ message: 'path api OK is working 🚀' });
-});
-
 
 router.get('/past', async (req, res) => {
   try{

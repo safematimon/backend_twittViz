@@ -10,8 +10,8 @@ mongoose.Promise = global.Promise;
 mongoose.set('strictQuery', false);
 // old
 // mongoose.connect('mongodb+srv://admin:1234@cluster0.hv7pxi6.mongodb.net/test?retryWrites=true&w=majority')
+// new region
 mongoose.connect('mongodb+srv://admin:1234@cluster0.yzkibdo.mongodb.net/?retryWrites=true&w=majority')
-
         .then(() => console.log('connect dai leaw'))
         .catch((err) => console.error(err));
 
@@ -29,9 +29,9 @@ app.get('/', async (req, res, next) => {
 app.use('/api', require('./routes/api.route'));
 
 // not use
-app.use((req, res, next) => {
-  next(createError.NotFound());
-});
+// app.use((req, res, next) => {
+//   next(createError.NotFound());
+// });
 
 // app.use(cors())
 
