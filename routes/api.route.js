@@ -47,13 +47,12 @@ router.get('/tweets', async (req, res, next) => {
     const query = req.query.query
     const type = req.query.type
     const queryTemp = query.replace(/[ ]/g,"+")
-    // const queryTemp2 = query.replace(/[ ]/g,"+")
     const queryTemp2 = queryTemp+" -is:retweet"
 
     let text = ''
     const public_metrics= {retweet_count: 0, reply_count: 0, like_count: 0, quote_count: 0};
     const source= {Twitter_for_iPhone: 0, Twitter_for_Android: 0, Twitter_Web_App: 0, Twitter_for_iPad: 0, else: 0};
-    const tweeType= {size: 0,tweet: 0, retweet: 0, reply: 0,media: 0,photosCount: 0,videosCount: 0};
+    const tweeType= {size: 0,tweet: 0, retweet: 0, reply: 0,text:0,media: 0,photosCount: 0,videosCount: 0};
     const lang= {}
     const context_domain= {}
     const context_entity= {}
@@ -168,7 +167,7 @@ router.get('/tweets', async (req, res, next) => {
             highestImpressionCountId = tweet.id;
             t4=tweet.public_metrics;
           }
-          // check time created_at
+
           let timestamp = new Date(tweet.created_at);
           if (timestamp > latestTimestamp) {
             latestTimestamp = timestamp;
@@ -225,35 +224,35 @@ router.get('/tweets', async (req, res, next) => {
           data = await clientV3.get(`tweets/search/recent`,params);
           relevancy_next = data.meta.next_token
         }
-        // else if(change_sort_order){
-        //   console.log('first next')
-        //   let params = {
-        //     'query': queryTemp2,
-        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
-        //     'max_results': 100,
-        //     'expansions': 'attachments.media_keys',
-        //   }
-        //   data = await clientV3.get(`tweets/search/recent`,params);
-        //   next = data.meta.next_token
-        //   change_sort_order = false
-        // }
-        // else if(next && tweeType.size<=1000){
-        //   console.log('next =',i)
-        //   let params = {
-        //     'query': queryTemp2,
-        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
-        //     'max_results': 100,
-        //     'expansions': 'attachments.media_keys',
-        //     'next_token': next
-        //   }
-        //   data = await clientV3.get(`tweets/search/recent`,params);
-        //   next = data.meta.next_token
-        // }
+        else if(change_sort_order){
+          console.log('first next')
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'max_results': 100,
+            'expansions': 'attachments.media_keys',
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          next = data.meta.next_token
+          change_sort_order = false
+        }
+        else if(next && tweeType.size<=1000){
+          console.log('next =',i)
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'max_results': 100,
+            'expansions': 'attachments.media_keys',
+            'next_token': next
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          next = data.meta.next_token
+        }
         else{
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
           break;
         }
-        // console.log(data)
+        
         tweeType.size = tweeType.size + data.data.length
         //here loop prepro
         for (let tweet of data.data){
@@ -351,14 +350,6 @@ router.get('/tweets', async (req, res, next) => {
           }
         }
       }
-      // // for media
-      // for (let tweet of data.includes.media){
-      //   if (tweet.type === "photo") {
-      //     tweeType.photosCount++;
-      //   } else if (tweet.type === "video") {
-      //     tweeType.videosCount++;
-      //   }
-      // }
     }
     // --------------------------------------------------------------------------------------------------------------------
     // text processing zone
@@ -389,8 +380,8 @@ router.get('/tweets', async (req, res, next) => {
     });
 
     const cutoff = [
-      '-','_','','|','.','=','–','—','(',')','+',';','•','!',
-      // '1','2','3','4','5','6','7','8','9','0',
+      '-','_','','|','.','=','–','—','(',')','+',';','•','!','[',']',
+      '1','2','3','4','5','6','7','8','9','0',
       'this','that','those','these',
       'be', 'is', 'am', 'are', 'was', 'were', //verb to be
       'a', 'an', 'the', // articles
@@ -418,7 +409,25 @@ router.get('/tweets', async (req, res, next) => {
       return { text: hashtag, value: hashtagCounts[hashtag] };
     });
     hashtagArray.sort((a, b) => b.value - a.value);
-    const hashtagtop = hashtagArray.slice(0, 10);
+    const hashtagtop = hashtagArray.slice(0, 5);
+    // --------------------------------------------------------------------------------------------------------------------
+    // URL zone
+    let urls = text.match(/(https?:\/\/[^\s]+)/g);
+    // let urls = text.match(/(https?:\/\/(?!t\.co)[^\s]+)/g);
+    const urlCounts = {};
+    urls.forEach((url) => {
+      if (urlCounts.hasOwnProperty(url)) {
+        urlCounts[url]++;
+      } else {
+        urlCounts[url] = 1;
+      }
+    });
+    const urlArray = Object.keys(urlCounts).map((url) => {
+      return { text: url, value: urlCounts[url] };
+    });
+    urlArray.sort((a, b) => b.value - a.value);
+    const urltop = urlArray.slice(0, 10);
+    // console.log(urltop)
     // --------------------------------------------------------------------------------------------------------------------
     // lang zone
     let langArr = Object.entries(lang).map(([lang, value]) => ({ lang, value }));
@@ -430,19 +439,19 @@ router.get('/tweets', async (req, res, next) => {
     // context zone
     let context_DomainArr = Object.entries(context_domain).map(([domain, value]) => ({ domain, value }));
     // Unified to undefined
-    for (let i = 0; i < context_DomainArr.length; i++) {
-      if (context_DomainArr[i].domain === 'Unified Twitter Taxonomy') {
-        context_DomainArr[i].domain = 'Undefined';
-        break;
-      }
-    }
+    // for (let i = 0; i < context_DomainArr.length; i++) {
+    //   if (context_DomainArr[i].domain === 'Unified Twitter Taxonomy') {
+    //     context_DomainArr[i].domain = 'Undefined';
+    //     break;
+    //   }
+    // }
     // --------------------------------------------------------------------------------------------------------------------
     // tweet id zone
     let arr = [highestRetweetCountId, highestLikeCountId, highestReplyCountId ,highestImpressionCountId];
     // --------------------------------------------------------------------------------------------------------------------
     // console.log Zone
-    // tweeType.size=size
     tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply
+    tweeType.text= tweeType.size - tweeType.media
     if(type==2){
       console.log(`Latest created_at: ${latestTimestamp}`);
       console.log(`Oldest created_at: ${oldestTimestamp}`);
@@ -455,10 +464,10 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['lang'] = langArrMapping
     dataplus['word'] = output
     dataplus['hashtag'] = hashtagtop
+    dataplus['url'] = urltop
     dataplus['context'] = context_DomainArr
     dataplus['popular3'] = arr
     dataplus['tweettype'] = tweeType
-    // dataplus['sensitive'] = possibly_sensitive_arr
     res.send(dataplus);
   }catch(error){
     console.log(error)
@@ -539,7 +548,7 @@ router.get('/test', async (req, res, next) => {
 //     res.status(500).send('Error updating trends');
 //   }
 // });
-// test create many
+
 router.get('/update-trends', async (req, res, next) => {
   try {
     const id = 1
@@ -562,12 +571,6 @@ router.get('/update-trends', async (req, res, next) => {
     Trend.insertMany(datatemp)
     console.log("Data inserted",new Date(),">",formattedDate)  // Success
     
-    // .then(function(){
-        // console.log("Data inserted",new Date(),">",formattedDate)  // Success
-    // }).catch(function(error){
-        // console.log(error)      // Failure
-    // });
-
     res.status(200).send("inserted");
   } catch (error) {
     console.error(error);
@@ -579,48 +582,6 @@ router.get('/test-cron', async (req, res, next) => {
   try{
     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> test-cron ',new Date(),">",formattedDate);
     res.send({ message: 'path api OK is working 🚀' });
-  }catch(error){
-    next(error)
-  }
-});
-
-router.get('/past', async (req, res) => {
-  try{
-    const timeframe = req.query.timeframe
-    // defalut
-    const formatLastDate = (hours) => {
-      const last = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const hoursStr = last.getHours().toString().padStart(2, '0');
-      const dayStr = last.getDate().toString().padStart(2, '0');
-      const monthStr = (last.getMonth() + 1).toString().padStart(2, '0');
-      const yearStr = last.getFullYear().toString();
-      return `${hoursStr}/${dayStr}/${monthStr}/${yearStr}`;
-    };
-    let formattedDate = formatLastDate(timeframe)
-
-    // if(timeframe == '12'){
-    //   formattedDate = formatLastDate(12)
-    // } else if(timeframe == '6'){
-    //   formattedDate = formatLastDate(6)
-    // } else if(timeframe == '3'){
-    //   formattedDate = formatLastDate(3)
-    // } else if(timeframe == '2'){
-    //   formattedDate = formatLastDate(2)
-    // } else if(timeframe == '1'){
-    //   formattedDate = formatLastDate(1)
-    // }else{
-    //   formattedDate = formatLastDate(24)
-    // }
-
-    console.log(formattedDate)
-    const data = await Trend.find({ time: formattedDate });
-    data.sort((a, b) => parseInt(a.no) - parseInt(b.no));
-
-    const responseData = {
-      data: data,
-      time: formattedDate
-    }
-    res.send(responseData);
   }catch(error){
     next(error)
   }
