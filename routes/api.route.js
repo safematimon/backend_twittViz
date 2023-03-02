@@ -549,6 +549,48 @@ router.get('/test', async (req, res, next) => {
 //   }
 // });
 
+router.get('/past', async (req, res) => {
+  try{
+    const timeframe = req.query.timeframe
+    // defalut
+    const formatLastDate = (hours) => {
+      const last = new Date(Date.now() - hours * 60 * 60 * 1000);
+      const hoursStr = last.getHours().toString().padStart(2, '0');
+      const dayStr = last.getDate().toString().padStart(2, '0');
+      const monthStr = (last.getMonth() + 1).toString().padStart(2, '0');
+      const yearStr = last.getFullYear().toString();
+      return `${hoursStr}/${dayStr}/${monthStr}/${yearStr}`;
+    };
+    let formattedDate = formatLastDate(timeframe)
+
+    // if(timeframe == '12'){
+    //   formattedDate = formatLastDate(12)
+    // } else if(timeframe == '6'){
+    //   formattedDate = formatLastDate(6)
+    // } else if(timeframe == '3'){
+    //   formattedDate = formatLastDate(3)
+    // } else if(timeframe == '2'){
+    //   formattedDate = formatLastDate(2)
+    // } else if(timeframe == '1'){
+    //   formattedDate = formatLastDate(1)
+    // }else{
+    //   formattedDate = formatLastDate(24)
+    // }
+
+    console.log(formattedDate)
+    const data = await Trend.find({ time: formattedDate });
+    data.sort((a, b) => parseInt(a.no) - parseInt(b.no));
+
+    const responseData = {
+      data: data,
+      time: formattedDate
+    }
+    res.send(responseData);
+  }catch(error){
+    next(error)
+  }
+});
+
 router.get('/update-trends', async (req, res, next) => {
   try {
     const id = 1
