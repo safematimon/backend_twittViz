@@ -2,13 +2,13 @@ const router = require('express').Router();
 const twitter= require('twitter')
 const twitterV2 = require('twitter-v2');
 const {languagesCode} = require('../mapping/languagesCode')
-
 const mongoose = require('mongoose');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
+const { response } = require('express');
+
 // const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
 // const { trusted } = require('mongoose');
-
 
 // twitter v1 for trend
 const client = new twitter({
@@ -52,7 +52,7 @@ router.get('/tweets', async (req, res, next) => {
     let text = ''
     const public_metrics= {retweet_count: 0, reply_count: 0, like_count: 0, quote_count: 0};
     const source= {Twitter_for_iPhone: 0, Twitter_for_Android: 0, Twitter_Web_App: 0, Twitter_for_iPad: 0, else: 0};
-    const tweeType= {size: 0,tweet: 0, retweet: 0, reply: 0,text:0,media: 0,photosCount: 0,videosCount: 0};
+    const tweeType= {size: 0,tweet: 0, retweet: 0, quote:0, reply: 0,text:0,media: 0,photosCount: 0,videosCount: 0};
     const lang= {}
     const context_domain= {}
     const context_entity= {}
@@ -62,25 +62,22 @@ router.get('/tweets', async (req, res, next) => {
     let next
     let relevancy_next
 
-    let highestRetweetCountId = "";
-    let highestLikeCountId = "";
-    let highestReplyCountId = "";
-    let highestImpressionCountId = "";
-    let highestRetweetCount = 0;
-    let highestLikeCount = 0;
-    let highestReplyCount = 0;
-    let highestImpressionCount =0;
-
+    const poptweet= {highestRetweetCountId: '',highestRetweetCount: 0, highestLikeCountId: '', highestLikeCount: 0,
+                    highestReplyCountId: '',highestReplyCount: 0,highestImpressionCountId: '',highestImpressionCount: 0};
     let latestTimestamp;
     let oldestTimestamp;
+
     let possibly_sensitive_count=0;
+
+    let hashtag_keep = [];
+    let mention_keep = [];
 
     // default i=1
     if(type == 1){
       console.log("init")
         let params3 = {
           'query': queryTemp2,
-          'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+          'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
           'max_results': 100,
           'sort_order': 'relevancy',
           'expansions': 'attachments.media_keys',
@@ -93,8 +90,26 @@ router.get('/tweets', async (req, res, next) => {
 
         for (let tweet of data.data){
 
-          if(tweet.in_reply_to_user_id){
+          if(tweet.entities && tweet.entities.hashtags){
+            for (let i = 0; i < tweet.entities.hashtags.length; i++) {
+              let tag = tweet.entities.hashtags[i].tag;
+              hashtag_keep.push(`#${tag}`);
+            }
+          }
+          
+          if(tweet.entities && tweet.entities.mentions){
+            for (let i = 0; i < tweet.entities.mentions.length; i++) {
+              let username = tweet.entities.mentions[i].username;
+              mention_keep.push(`@${username}`);
+            }
+          }
+
+          if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='replied_to'){
             tweeType.reply++;
+          }
+          
+          if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='quoted'){
+            tweeType.quote++;
           }
           
           const regexRT = /RT @/g;
@@ -147,25 +162,21 @@ router.get('/tweets', async (req, res, next) => {
               }
             }
           }
-          if (tweet.public_metrics.retweet_count >= highestRetweetCount) {
-            highestRetweetCount = tweet.public_metrics.retweet_count;
-            highestRetweetCountId = tweet.id;
-            t1=tweet.public_metrics;
+          if (tweet.public_metrics.retweet_count >= poptweet.highestRetweetCount) {
+            poptweet.highestRetweetCount = tweet.public_metrics.retweet_count;
+            poptweet.highestRetweetCountId = tweet.id;
           }
-          if (tweet.public_metrics.like_count >= highestLikeCount) {
-            highestLikeCount = tweet.public_metrics.like_count;
-            highestLikeCountId = tweet.id;
-            t2=tweet.public_metrics;
+          if (tweet.public_metrics.like_count >= poptweet.highestLikeCount) {
+            poptweet.highestLikeCount = tweet.public_metrics.like_count;
+            poptweet.highestLikeCountId= tweet.id;
           }
-          if (tweet.public_metrics.reply_count >= highestReplyCount) {
-            highestReplyCount = tweet.public_metrics.reply_count;
-            highestReplyCountId = tweet.id;
-            t3=tweet.public_metrics;
+          if (tweet.public_metrics.reply_count >= poptweet.highestReplyCount) {
+            poptweet.highestReplyCount = tweet.public_metrics.reply_count;
+            poptweet.highestReplyCountId = tweet.id;
           }
-          if (tweet.public_metrics.impression_count >= highestImpressionCount) {
-            highestImpressionCount = tweet.public_metrics.impression_count;
-            highestImpressionCountId = tweet.id;
-            t4=tweet.public_metrics;
+          if (tweet.public_metrics.impression_count >= poptweet.highestImpressionCount) {
+            poptweet.highestImpressionCount = tweet.public_metrics.impression_count;
+            poptweet.highestImpressionCountId = tweet.id;
           }
 
           let timestamp = new Date(tweet.created_at);
@@ -195,7 +206,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('i = 1')
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'sort_order': 'relevancy',
             'expansions': 'attachments.media_keys',
@@ -215,7 +226,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('i =',i)
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'sort_order': 'relevancy',
             'expansions': 'attachments.media_keys',
@@ -228,7 +239,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('first next')
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'expansions': 'attachments.media_keys',
           }
@@ -240,7 +251,7 @@ router.get('/tweets', async (req, res, next) => {
           console.log('next =',i)
           let params = {
             'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,in_reply_to_user_id,attachments",
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'expansions': 'attachments.media_keys',
             'next_token': next
@@ -256,9 +267,29 @@ router.get('/tweets', async (req, res, next) => {
         tweeType.size = tweeType.size + data.data.length
         //here loop prepro
         for (let tweet of data.data){
-          if(tweet.in_reply_to_user_id){
+
+          if(tweet.entities && tweet.entities.hashtags){
+            for (let i = 0; i < tweet.entities.hashtags.length; i++) {
+              let tag = tweet.entities.hashtags[i].tag;
+              hashtag_keep.push(`#${tag}`);
+            }
+          }
+          
+          if(tweet.entities && tweet.entities.mentions){
+            for (let i = 0; i < tweet.entities.mentions.length; i++) {
+              let username = tweet.entities.mentions[i].username;
+              mention_keep.push(`@${username}`);
+            }
+          }
+
+          if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='replied_to'){
             tweeType.reply++;
           }
+          
+          if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='quoted'){
+            tweeType.quote++;
+          }
+
           const regexRT = /RT @/g;
           if(tweet.text.match(regexRT)){
             tweeType.retweet++;
@@ -307,25 +338,21 @@ router.get('/tweets', async (req, res, next) => {
               }
             }
           }
-          if (tweet.public_metrics.retweet_count >= highestRetweetCount) {
-            highestRetweetCount = tweet.public_metrics.retweet_count;
-            highestRetweetCountId = tweet.id;
-            t1=tweet.public_metrics;
+          if (tweet.public_metrics.retweet_count >= poptweet.highestRetweetCount) {
+            poptweet.highestRetweetCount = tweet.public_metrics.retweet_count;
+            poptweet.highestRetweetCountId = tweet.id;
           }
-          if (tweet.public_metrics.like_count >= highestLikeCount) {
-            highestLikeCount = tweet.public_metrics.like_count;
-            highestLikeCountId = tweet.id;
-            t2=tweet.public_metrics;
+          if (tweet.public_metrics.like_count >= poptweet.highestLikeCount) {
+            poptweet.highestLikeCount = tweet.public_metrics.like_count;
+            poptweet.highestLikeCountId= tweet.id;
           }
-          if (tweet.public_metrics.reply_count >= highestReplyCount) {
-            highestReplyCount = tweet.public_metrics.reply_count;
-            highestReplyCountId = tweet.id;
-            t3=tweet.public_metrics;
+          if (tweet.public_metrics.reply_count >= poptweet.highestReplyCount) {
+            poptweet.highestReplyCount = tweet.public_metrics.reply_count;
+            poptweet.highestReplyCountId = tweet.id;
           }
-          if (tweet.public_metrics.impression_count >= highestImpressionCount) {
-            highestImpressionCount = tweet.public_metrics.impression_count;
-            highestImpressionCountId = tweet.id;
-            t4=tweet.public_metrics;
+          if (tweet.public_metrics.impression_count >= poptweet.highestImpressionCount) {
+            poptweet.highestImpressionCount = tweet.public_metrics.impression_count;
+            poptweet.highestImpressionCountId = tweet.id;
           }
           // check time created_at
           let timestamp = new Date(tweet.created_at);
@@ -340,7 +367,6 @@ router.get('/tweets', async (req, res, next) => {
             possibly_sensitive_count += 1;
           }
         }
-
         // for media
         for (let tweet of data.includes.media){
           if (tweet.type === "photo") {
@@ -372,7 +398,7 @@ router.get('/tweets', async (req, res, next) => {
         );
     }
     let wordCount = wordFreq(textreplace2)
-
+    
     let sortable = [];
     for (var item in wordCount) {sortable.push([item, wordCount[item]]);}
     sortable.sort(function(b, a) {
@@ -380,7 +406,7 @@ router.get('/tweets', async (req, res, next) => {
     });
 
     const cutoff = [
-      '-','_','','|','.','=','–','—','(',')','+',';','•','!','[',']',
+      '-','_','','|','.','=','–','—','(',')','+',';','•','!','[',']','›','<',
       '1','2','3','4','5','6','7','8','9','0',
       'this','that','those','these',
       'be', 'is', 'am', 'are', 'was', 'were', //verb to be
@@ -395,25 +421,59 @@ router.get('/tweets', async (req, res, next) => {
     let top = filteredArray.slice(0,100)
     let output = top.map(([text, value]) => ({ text, value }));
     // --------------------------------------------------------------------------------------------------------------------
-    // hashtag zone
-    let hashtags = text.match(/#\w+/g);
-    const hashtagCounts = {};
-    hashtags.forEach((hashtag) => {
-      if (hashtagCounts.hasOwnProperty(hashtag)) {
-        hashtagCounts[hashtag]++;
+    // hashtag zone 
+    let hashtag_keep_lower = hashtag_keep.map(hashtag => hashtag.toLowerCase());
+
+    let hashtagCount = hashtag_keep_lower.reduce((acc, hashtag) => {
+      let existingHashtag = acc.find(obj => obj.text === hashtag);
+      if (existingHashtag) {
+          existingHashtag.value++;
       } else {
-        hashtagCounts[hashtag] = 1;
+          acc.push({text: hashtag, value: 1});
       }
+      return acc;
+    }, []);
+    hashtagCount.sort((a, b) => b.value - a.value);
+    let top5Hashtags = hashtagCount.slice(0, 5);
+    //separate 
+    const counts = {};
+    hashtag_keep.forEach((match) => {
+      counts[match] = counts[match] ? counts[match] + 1 : 1;
     });
-    const hashtagArray = Object.keys(hashtagCounts).map((hashtag) => {
-      return { text: hashtag, value: hashtagCounts[hashtag] };
+
+    const typehashtag = Object.entries(counts).map(([type, value]) => ({
+      text: type.toLowerCase(),
+      value,
+      type,
+    }));
+    const filterhashtag = typehashtag.filter((obj) =>
+      top5Hashtags.some((ht) => ht.text.toLowerCase() === obj.text.toLowerCase())
+    );
+    filterhashtag.sort((a, b) => b.value - a.value);
+    // --------------------------------------------------------------------------------------------------------------------
+    // mention hashtag zone 
+    let mentionCount = {};
+
+    for (let i = 0; i < mention_keep.length; i++) {
+      // let mention = mention_keep[i].toLowerCase();
+      let mention = mention_keep[i];
+      let mentionText = mention.substring(1);
+      if (mentionCount.hasOwnProperty(mentionText)) {
+        mentionCount[mentionText]++;
+      } else {
+        mentionCount[mentionText] = 1;
+      }
+    }
+    
+    let mentionObj = Object.keys(mentionCount).map(mentionText => {
+      return { text: "@" + mentionText, value: mentionCount[mentionText] };
     });
-    hashtagArray.sort((a, b) => b.value - a.value);
-    const hashtagtop = hashtagArray.slice(0, 5);
+  
+    mentionObj.sort((a, b) => b.value - a.value);
+    let top5mention = mentionObj.slice(0, 5);
     // --------------------------------------------------------------------------------------------------------------------
     // URL zone
     let urls = text.match(/(https?:\/\/[^\s]+)/g);
-    // let urls = text.match(/(https?:\/\/(?!t\.co)[^\s]+)/g);
     const urlCounts = {};
     urls.forEach((url) => {
       if (urlCounts.hasOwnProperty(url)) {
@@ -427,7 +487,6 @@ router.get('/tweets', async (req, res, next) => {
     });
     urlArray.sort((a, b) => b.value - a.value);
     const urltop = urlArray.slice(0, 10);
-    // console.log(urltop)
     // --------------------------------------------------------------------------------------------------------------------
     // lang zone
     let langArr = Object.entries(lang).map(([lang, value]) => ({ lang, value }));
@@ -446,11 +505,8 @@ router.get('/tweets', async (req, res, next) => {
     //   }
     // }
     // --------------------------------------------------------------------------------------------------------------------
-    // tweet id zone
-    let arr = [highestRetweetCountId, highestLikeCountId, highestReplyCountId ,highestImpressionCountId];
-    // --------------------------------------------------------------------------------------------------------------------
     // console.log Zone
-    tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply
+    tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply-tweeType.quote
     tweeType.text= tweeType.size - tweeType.media
     if(type==2){
       console.log(`Latest created_at: ${latestTimestamp}`);
@@ -463,10 +519,11 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['source'] = source
     dataplus['lang'] = langArrMapping
     dataplus['word'] = output
-    dataplus['hashtag'] = hashtagtop
+    dataplus['hashtag'] = filterhashtag
+    dataplus['mention'] = top5mention
     dataplus['url'] = urltop
     dataplus['context'] = context_DomainArr
-    dataplus['popular3'] = arr
+    dataplus['popular3'] = poptweet
     dataplus['tweettype'] = tweeType
     res.send(dataplus);
   }catch(error){
@@ -499,84 +556,31 @@ router.get('/test', async (req, res, next) => {
   res.send({ message: 'test api OK is working 🚀' });
 });
 
-// cron.schedule('15 */1 * * *', async () => {
-//   // console.log('running a task every hour');
-//   // cron.schedule('*/10 * * * *', async () => {
-//   const id = 1
-//   const data = await client.get('trends/place.json', {id})
-
-//   const date = new Date();
-//   const hours = date.getHours().toString().padStart(2, '0');
-//   const day = date.getDate().toString().padStart(2, '0');
-//   const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//   const year = date.getFullYear().toString();
-//   const formattedDate = `${hours}/${day}/${month}/${year}`;
-
-//   data[0].trends.forEach((trend, index) => {
-//     Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
-//       if(err) return next(err);
-//     });
-//   });
-//     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>tick',new Date(),">",formattedDate)
-// });
-
-// old
-// router.get('/update-trends', async (req, res, next) => {
-//   try {
-//     const id = 1
-//     const data = await client.get('trends/place.json', {id})
-
-//     const date = new Date();
-//     const hours = date.getHours().toString().padStart(2, '0');
-//     const day = date.getDate().toString().padStart(2, '0');
-//     const month = (date.getMonth() + 1).toString().padStart(2, '0');
-//     const year = date.getFullYear().toString();
-//     const formattedDate = `${hours}/${day}/${month}/${year}`;
-
-//     data[0].trends.forEach((trend, index) => {
-//       Trend.create({ no: index+1,name:trend.name,tweet_volume: trend.tweet_volume,time: formattedDate},(err) =>{
-//         console.log("create:",index+1)
-//         if(err) return next(err);
-//       });
-//     });
-
-//     console.log('tick trend ',new Date(),">",formattedDate);
-//     // console.log(data);
-//     res.status(200).send(data);
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).send('Error updating trends');
-//   }
-// });
-
 router.get('/past', async (req, res) => {
   try{
     const timeframe = req.query.timeframe
     // defalut
     const formatLastDate = (hours) => {
-      const last = new Date(Date.now() - hours * 60 * 60 * 1000);
-      const hoursStr = last.getHours().toString().padStart(2, '0');
-      const dayStr = last.getDate().toString().padStart(2, '0');
-      const monthStr = (last.getMonth() + 1).toString().padStart(2, '0');
-      const yearStr = last.getFullYear().toString();
-      return `${hoursStr}/${dayStr}/${monthStr}/${yearStr}`;
+      if(hours<25){
+        let last = new Date(Date.now() - hours * 60 * 60 * 1000);
+        let hoursStr = last.getHours().toString().padStart(2, '0');
+        let dayStr = last.getDate().toString().padStart(2, '0');
+        let monthStr = (last.getMonth() + 1).toString().padStart(2, '0');
+        let yearStr = last.getFullYear().toString();
+        return `${hoursStr}/${dayStr}/${monthStr}/${yearStr}`;
+      }
+      else{
+        let hours2 = (hours-23)*24
+        let last = new Date(Date.now() - hours2  * 60 * 60 * 1000);
+        let hoursStr = last.getHours().toString().padStart(2, '0');
+        let dayStr = last.getDate().toString().padStart(2, '0');
+        let monthStr = (last.getMonth() + 1).toString().padStart(2, '0');
+        let yearStr = last.getFullYear().toString();
+        return `${hoursStr}/${dayStr}/${monthStr}/${yearStr}`;    // let formattedDate = `at 12.00 last 2 day ago (${dayStr}/${monthStr}/${yearStr})`;
+      }
     };
     let formattedDate = formatLastDate(timeframe)
-
-    // if(timeframe == '12'){
-    //   formattedDate = formatLastDate(12)
-    // } else if(timeframe == '6'){
-    //   formattedDate = formatLastDate(6)
-    // } else if(timeframe == '3'){
-    //   formattedDate = formatLastDate(3)
-    // } else if(timeframe == '2'){
-    //   formattedDate = formatLastDate(2)
-    // } else if(timeframe == '1'){
-    //   formattedDate = formatLastDate(1)
-    // }else{
-    //   formattedDate = formatLastDate(24)
-    // }
-
+  
     console.log(formattedDate)
     const data = await Trend.find({ time: formattedDate });
     data.sort((a, b) => parseInt(a.no) - parseInt(b.no));
