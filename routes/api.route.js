@@ -280,7 +280,7 @@ router.get('/tweets', async (req, res, next) => {
               let username = tweet.entities.mentions[i].username;
               mention_keep.push(`@${username}`);
             }
-          }
+          }   
 
           if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='replied_to'){
             tweeType.reply++;
@@ -494,9 +494,11 @@ router.get('/tweets', async (req, res, next) => {
       const langName = languagesCode[item.lang] || 'unknown';
       return { lang: langName, value: item.value };
     });
+    langArrMapping.sort((a, b) => b.value - a.value);
     // --------------------------------------------------------------------------------------------------------------------
     // context zone
     let context_DomainArr = Object.entries(context_domain).map(([domain, value]) => ({ domain, value }));
+    context_DomainArr.sort((a, b) => b.value - a.value);
     // Unified to undefined
     // for (let i = 0; i < context_DomainArr.length; i++) {
     //   if (context_DomainArr[i].domain === 'Unified Twitter Taxonomy') {
