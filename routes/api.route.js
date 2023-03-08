@@ -77,6 +77,8 @@ router.get('/tweets', async (req, res, next) => {
     ]
 
     const collect = [];
+    const media_keys_collect = [];
+    const media_keys_url = [];
     // default i=1
     if(type == 1){
       console.log("init")
@@ -85,6 +87,7 @@ router.get('/tweets', async (req, res, next) => {
           'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
           'max_results': 100,
           'sort_order': 'relevancy',
+          'media.fields': 'url',
           'expansions': 'attachments.media_keys',
         }
         // old is clientV2 not work with -rt 
@@ -94,6 +97,13 @@ router.get('/tweets', async (req, res, next) => {
         tweeType.size = tweeType.size + data.data.length
 
         for (let tweet of data.data){
+
+          if(tweet.attachments && tweet.attachments.media_keys){
+            tweet.attachments.media_keys.forEach(key=>{
+              media_keys_collect.push({key:key,view:tweet.public_metrics.impression_count})
+            });
+          }
+
           if(tweet.context_annotations){
             tweet.context_annotations.forEach(annotation => {
               const domainName = annotation.domain.name;
@@ -226,6 +236,7 @@ router.get('/tweets', async (req, res, next) => {
           for (let tweet of data.includes.media){
             if (tweet.type === "photo") {
               tweeType.photosCount++;
+              media_keys_url.push({key:tweet.media_key,url:tweet.url})
             } else if (tweet.type === "video") {
               tweeType.videosCount++;
             }
@@ -241,6 +252,7 @@ router.get('/tweets', async (req, res, next) => {
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'sort_order': 'relevancy',
+            'media.fields': 'url',
             'expansions': 'attachments.media_keys',
           }
           data = await clientV3.get(`tweets/search/recent`,params);
@@ -261,6 +273,7 @@ router.get('/tweets', async (req, res, next) => {
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
             'sort_order': 'relevancy',
+            'media.fields': 'url',
             'expansions': 'attachments.media_keys',
             'next_token': relevancy_next
           }
@@ -273,6 +286,7 @@ router.get('/tweets', async (req, res, next) => {
             'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
+            'media.fields': 'url',
             'expansions': 'attachments.media_keys',
           }
           data = await clientV3.get(`tweets/search/recent`,params);
@@ -285,6 +299,7 @@ router.get('/tweets', async (req, res, next) => {
             'query': queryTemp2,
             'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
             'max_results': 100,
+            'media.fields': 'url',
             'expansions': 'attachments.media_keys',
             'next_token': next
           }
@@ -312,6 +327,12 @@ router.get('/tweets', async (req, res, next) => {
             tweet.public_metrics.impression_count
           ];
           csvData.push(row);
+
+          if(tweet.attachments && tweet.attachments.media_keys){
+            tweet.attachments.media_keys.forEach(key=>{
+              media_keys_collect.push({key:key,view:tweet.public_metrics.impression_count})
+            });
+          }
 
           if(tweet.context_annotations){
   
@@ -444,6 +465,7 @@ router.get('/tweets', async (req, res, next) => {
           for (let tweet of data.includes.media){
             if (tweet.type === "photo") {
               tweeType.photosCount++;
+              media_keys_url.push({key:tweet.media_key,url:tweet.url})
             } else if (tweet.type === "video") {
               tweeType.videosCount++;
             }
@@ -596,19 +618,12 @@ router.get('/tweets', async (req, res, next) => {
 
     const top5Domains = newCollect.slice(0, 5);
 
-
     // Get the top 2 entities for each domain
     top5Domains.forEach(domain => {
         domain.entities.sort((a, b) => b.value - a.value);
         // domain.top5Entities = domain.entities.slice(0, 5);
         domain.entities = domain.entities.slice(0, 5);
     });
-    // console.log(">>>>>>>>>");
-    // console.log(top5Domains[0]);
-    // console.log(top5Domains[1]);
-    // console.log(top5Domains[2]);
-    // console.log(top5Domains[3]);
-    // console.log(top5Domains[4]);
 
     if(type==2){
       // console.log(">>>>>>>>>");
@@ -654,13 +669,6 @@ router.get('/tweets', async (req, res, next) => {
       'user.fields': 'profile_image_url'
     }
     let accountData = await clientV3.get(`users/by?usernames`,user_param);
-
-    // let accData = accountData.data.map((obj) => {
-    //   return {
-    //     ...obj,
-    //     profile_image_url: obj.profile_image_url.replace('_normal', '_200x200')
-    //   };
-    // });
     const accData = accountData.data.map(item => {
       const foundItem = top5mention.find(i => i.text === item.username);
       const value = foundItem ? foundItem.value : 0;
@@ -671,10 +679,25 @@ router.get('/tweets', async (req, res, next) => {
         value
       }
     })
+    //---------------------------------------------------------------------------------------------------------------------
+    // media url zone
+    const merge_media = [];
+
+    for (let i = 0; i < media_keys_collect.length; i++) {
+      const key = media_keys_collect[i].key;
+      const view = media_keys_collect[i].view;
+      const url_item = media_keys_url.find(item => item.key === key);
+      if (url_item) {
+        merge_media.push({ url: url_item.url, view });
+      }
+    } 
+    merge_media.sort((a, b) => b.view - a.view);
+    const Top10merge_media = merge_media.slice(0, 10);
 
     // --------------------------------------------------------------------------------------------------------------------
     tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply-tweeType.quote
     tweeType.text= tweeType.size - tweeType.media
+    // media_keys_collect
     // if(type==2){
     //   console.log(`Latest created_at: ${latestTimestamp}`);
     //   console.log(`Oldest created_at: ${oldestTimestamp}`);
@@ -707,6 +730,7 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['Domain3'] = top5Domains[2]
     dataplus['Domain4'] = top5Domains[3]
     dataplus['csvData'] = csvData
+    dataplus['media'] = Top10merge_media
     res.send(dataplus);
   }catch(error){
     console.log(error)
