@@ -72,6 +72,11 @@ router.get('/tweets', async (req, res, next) => {
     let hashtag_keep = [];
     let mention_keep = [];
 
+    let csvData = [
+      ["id", "text","created_at","lang","retweet_count","reply_count","like_count","quote_count","impression_count"]
+    ]
+
+    const collect = [];
     // default i=1
     if(type == 1){
       console.log("init")
@@ -89,6 +94,31 @@ router.get('/tweets', async (req, res, next) => {
         tweeType.size = tweeType.size + data.data.length
 
         for (let tweet of data.data){
+          if(tweet.context_annotations){
+            tweet.context_annotations.forEach(annotation => {
+              const domainName = annotation.domain.name;
+              const entityName = annotation.entity.name;
+              let domainObject = collect.find(collectObj => collectObj.name === domainName);
+              if (!domainObject) {
+                  domainObject = {
+                      name: domainName,
+                      count: 0,
+                      entities: []
+                  };
+                  collect.push(domainObject);
+              }
+              let entityObject = domainObject.entities.find(entity => entity.name === entityName);
+              if (!entityObject) {
+                  entityObject = {
+                      name: entityName,
+                      value: 0
+                  };
+                  domainObject.entities.push(entityObject);
+              }
+              domainObject.count++;
+              entityObject.value++;
+            });
+          } 
 
           if(tweet.entities && tweet.entities.hashtags){
             for (let i = 0; i < tweet.entities.hashtags.length; i++) {
@@ -192,11 +222,13 @@ router.get('/tweets', async (req, res, next) => {
           }
         }
         // for media
-        for (let tweet of data.includes.media){
-          if (tweet.type === "photo") {
-            tweeType.photosCount++;
-          } else if (tweet.type === "video") {
-            tweeType.videosCount++;
+        if(data.includes && data.includes.media){
+          for (let tweet of data.includes.media){
+            if (tweet.type === "photo") {
+              tweeType.photosCount++;
+            } else if (tweet.type === "video") {
+              tweeType.videosCount++;
+            }
           }
         }
     }
@@ -268,6 +300,46 @@ router.get('/tweets', async (req, res, next) => {
         //here loop prepro
         for (let tweet of data.data){
 
+          let row = [
+            tweet.id,
+            tweet.text,
+            tweet.created_at,
+            tweet.lang,
+            tweet.public_metrics.retweet_count,
+            tweet.public_metrics.reply_count,
+            tweet.public_metrics.like_count,
+            tweet.public_metrics.quote_count,
+            tweet.public_metrics.impression_count
+          ];
+          csvData.push(row);
+
+          if(tweet.context_annotations){
+  
+            tweet.context_annotations.forEach(annotation => {
+              const domainName = annotation.domain.name;
+              const entityName = annotation.entity.name;
+              let domainObject = collect.find(collectObj => collectObj.name === domainName);
+              if (!domainObject) {
+                  domainObject = {
+                      name: domainName,
+                      count: 0,
+                      entities: []
+                  };
+                  collect.push(domainObject);
+              }
+              let entityObject = domainObject.entities.find(entity => entity.name === entityName);
+              if (!entityObject) {
+                  entityObject = {
+                      name: entityName,
+                      value: 0
+                  };
+                  domainObject.entities.push(entityObject);
+              }
+              domainObject.count++;
+              entityObject.value++;
+            });
+          } 
+      
           if(tweet.entities && tweet.entities.hashtags){
             for (let i = 0; i < tweet.entities.hashtags.length; i++) {
               let tag = tweet.entities.hashtags[i].tag;
@@ -368,11 +440,13 @@ router.get('/tweets', async (req, res, next) => {
           }
         }
         // for media
-        for (let tweet of data.includes.media){
-          if (tweet.type === "photo") {
-            tweeType.photosCount++;
-          } else if (tweet.type === "video") {
-            tweeType.videosCount++;
+        if(data.includes && data.includes.media){
+          for (let tweet of data.includes.media){
+            if (tweet.type === "photo") {
+              tweeType.photosCount++;
+            } else if (tweet.type === "video") {
+              tweeType.videosCount++;
+            }
           }
         }
       }
@@ -466,7 +540,8 @@ router.get('/tweets', async (req, res, next) => {
     }
     
     let mentionObj = Object.keys(mentionCount).map(mentionText => {
-      return { text: "@" + mentionText, value: mentionCount[mentionText] };
+      // return { text: "@" + mentionText, value: mentionCount[mentionText] };
+      return { text: mentionText, value: mentionCount[mentionText] };
     });
   
     mentionObj.sort((a, b) => b.value - a.value);
@@ -507,26 +582,127 @@ router.get('/tweets', async (req, res, next) => {
     //   }
     // }
     // --------------------------------------------------------------------------------------------------------------------
-    // console.log Zone
+  // if(type==2){
+    // Sort collect data by value
+    collect.sort((a, b) => b.count - a.count);
+
+    // Sort each entity by value
+    collect.forEach(domain => {
+      domain.entities.sort((a, b) => b.value - a.value);
+    });
+  
+    const top5Domains = collect.slice(0, 5);
+
+    // Get the top 2 entities for each domain
+    top5Domains.forEach(domain => {
+        domain.entities.sort((a, b) => b.value - a.value);
+        // domain.top5Entities = domain.entities.slice(0, 5);
+        domain.entities = domain.entities.slice(0, 5);
+    });
+    // console.log(">>>>>>>>>");
+    // console.log(top5Domains[0]);
+    // console.log(top5Domains[1]);
+    // console.log(top5Domains[2]);
+    // console.log(top5Domains[3]);
+    // console.log(top5Domains[4]);
+
+    if(type==2){
+      console.log(">>>>>>>>>");
+      const person_collect = []
+      const place_collect = [];
+      const city_collect = [];
+      const organization_collect = [];
+      const produtc_collect = [];
+      const other_collect = [];
+    // Filter collect data for specific domain names
+    ["Person","Organization","Place","Cities","Product","Other"].forEach(domainName => {
+      const filteredDomain = collect.find(collectObj => collectObj.name === domainName);
+      if (filteredDomain) {
+        if (domainName === "Person") {
+          person_collect.push(filteredDomain);
+        } else if (domainName === "Organization") {
+          organization_collect.push(filteredDomain);
+        } else if (domainName === "Place") {
+          place_collect.push(filteredDomain);
+        } else if (domainName === "Cities") {
+          city_collect.push(filteredDomain);
+        } else if (domainName === "Product") {
+          produtc_collect.push(filteredDomain);
+        } else if (domainName === "Other") {
+          other_collect.push(filteredDomain);
+        }
+      }
+    });
+    // console.log("person>",person_collect)
+    // console.log("place>",place_collect)
+    // console.log("city>",city_collect)
+    // console.log("org>",organization_collect)
+    // console.log("product>",produtc_collect)
+    // console.log("other",other_collect)
+  }
+
+    // --------------------------------------------------------------------------------------------------------------------
+    // account Zone 
+    let textmention = top5mention.map(obj => obj.text);
+    let mentionlist = textmention.join(",");
+    let user_param = {
+      'usernames': mentionlist,
+      'user.fields': 'profile_image_url'
+    }
+    let accountData = await clientV3.get(`users/by?usernames`,user_param);
+
+    // let accData = accountData.data.map((obj) => {
+    //   return {
+    //     ...obj,
+    //     profile_image_url: obj.profile_image_url.replace('_normal', '_200x200')
+    //   };
+    // });
+    const accData = accountData.data.map(item => {
+      const foundItem = top5mention.find(i => i.text === item.username);
+      const value = foundItem ? foundItem.value : 0;
+      
+      return {
+        ...item,
+        profile_image_url: item.profile_image_url.replace("_normal", "_400x400"),
+        value
+      }
+    })
+
+    // --------------------------------------------------------------------------------------------------------------------
     tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply-tweeType.quote
     tweeType.text= tweeType.size - tweeType.media
-    if(type==2){
-      console.log(`Latest created_at: ${latestTimestamp}`);
-      console.log(`Oldest created_at: ${oldestTimestamp}`);
-    }
+    // if(type==2){
+    //   console.log(`Latest created_at: ${latestTimestamp}`);
+    //   console.log(`Oldest created_at: ${oldestTimestamp}`);
+      // console.log(top5mention)
+      // console.log(">>>")
+      // console.log("top5mention",top5mention)
+      // console.log(">>>")
+      // console.log("mentionlist",mentionlist)
+      // console.log(">>>")
+      // console.log("accountData",accData)
+
+    // }
     // --------------------------------------------------------------------------------------------------------------------
     let dataplus = {}
-    dataplus = data
+    // dataplus = data
     dataplus['public_metrics'] = public_metrics
     dataplus['source'] = source
     dataplus['lang'] = langArrMapping
     dataplus['word'] = output
     dataplus['hashtag'] = filterhashtag
-    dataplus['mention'] = top5mention
+    // dataplus['mention'] = top5mention
+    dataplus['mention'] = accData
     dataplus['url'] = urltop
     dataplus['context'] = context_DomainArr
     dataplus['popular3'] = poptweet
     dataplus['tweettype'] = tweeType
+    dataplus['top5'] = top5Domains
+    dataplus['Domain1'] = top5Domains[0]
+    dataplus['Domain2'] = top5Domains[1]
+    dataplus['Domain3'] = top5Domains[2]
+    dataplus['Domain4'] = top5Domains[3]
+    dataplus['csvData'] = csvData
     res.send(dataplus);
   }catch(error){
     console.log(error)
