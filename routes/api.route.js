@@ -591,7 +591,11 @@ router.get('/tweets', async (req, res, next) => {
       domain.entities.sort((a, b) => b.value - a.value);
     });
   
-    const top5Domains = collect.slice(0, 5);
+    const drop=["Actor","Politicians","Musician"]
+    const newCollect = collect.filter(obj => !drop.includes(obj.name));
+
+    const top5Domains = newCollect.slice(0, 5);
+
 
     // Get the top 2 entities for each domain
     top5Domains.forEach(domain => {
@@ -607,32 +611,32 @@ router.get('/tweets', async (req, res, next) => {
     // console.log(top5Domains[4]);
 
     if(type==2){
-      console.log(">>>>>>>>>");
-      const person_collect = []
-      const place_collect = [];
-      const city_collect = [];
-      const organization_collect = [];
-      const produtc_collect = [];
-      const other_collect = [];
+      // console.log(">>>>>>>>>");
+      // const person_collect = []
+      // const place_collect = [];
+      // const city_collect = [];
+      // const organization_collect = [];
+      // const produtc_collect = [];
+      // const other_collect = [];
     // Filter collect data for specific domain names
-    ["Person","Organization","Place","Cities","Product","Other"].forEach(domainName => {
-      const filteredDomain = collect.find(collectObj => collectObj.name === domainName);
-      if (filteredDomain) {
-        if (domainName === "Person") {
-          person_collect.push(filteredDomain);
-        } else if (domainName === "Organization") {
-          organization_collect.push(filteredDomain);
-        } else if (domainName === "Place") {
-          place_collect.push(filteredDomain);
-        } else if (domainName === "Cities") {
-          city_collect.push(filteredDomain);
-        } else if (domainName === "Product") {
-          produtc_collect.push(filteredDomain);
-        } else if (domainName === "Other") {
-          other_collect.push(filteredDomain);
-        }
-      }
-    });
+    // ["Person","Organization","Place","Cities","Product","Other"].forEach(domainName => {
+    //   const filteredDomain = collect.find(collectObj => collectObj.name === domainName);
+    //   if (filteredDomain) {
+    //     if (domainName === "Person") {
+    //       person_collect.push(filteredDomain);
+    //     } else if (domainName === "Organization") {
+    //       organization_collect.push(filteredDomain);
+    //     } else if (domainName === "Place") {
+    //       place_collect.push(filteredDomain);
+    //     } else if (domainName === "Cities") {
+    //       city_collect.push(filteredDomain);
+    //     } else if (domainName === "Product") {
+    //       produtc_collect.push(filteredDomain);
+    //     } else if (domainName === "Other") {
+    //       other_collect.push(filteredDomain);
+    //     }
+    //   }
+    // });
     // console.log("person>",person_collect)
     // console.log("place>",place_collect)
     // console.log("city>",city_collect)
