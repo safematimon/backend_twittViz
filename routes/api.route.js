@@ -287,49 +287,49 @@ router.get('/tweets', async (req, res, next) => {
           highestReplyCount = data.data[0].public_metrics.reply_count;
           highestImpressionCount = data.data[0].public_metrics.impression_count;
         }
-        // else if(relevancy_next){
-        //   console.log('i =',i)
-        //   let params = {
-        //     'query': queryTemp2,
-        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-        //     'max_results': 100,
-        //     'sort_order': 'relevancy',
-        //     'media.fields': 'url',
-        //     'user.fields': 'created_at,location,verified,profile_image_url',
-        //     'expansions': 'attachments.media_keys,author_id',
-        //     'next_token': relevancy_next
-        //   }
-        //   data = await clientV3.get(`tweets/search/recent`,params);
-        //   relevancy_next = data.meta.next_token
-        // }
-        // else if(change_sort_order){
-        //   console.log('first next')
-        //   let params = {
-        //     'query': queryTemp2,
-        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-        //     'max_results': 100,
-        //     'media.fields': 'url',
-        //     'user.fields': 'created_at,location,verified,profile_image_url',
-        //     'expansions': 'attachments.media_keys,author_id',
-        //   }
-        //   data = await clientV3.get(`tweets/search/recent`,params);
-        //   next = data.meta.next_token
-        //   change_sort_order = false
-        // }
-        // else if(next && tweeType.size<=1000){
-        //   console.log('next =',i)
-        //   let params = {
-        //     'query': queryTemp2,
-        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-        //     'max_results': 100,
-        //     'media.fields': 'url',
-        //     'user.fields': 'created_at,location,verified,profile_image_url',
-        //     'expansions': 'attachments.media_keys,author_id',
-        //     'next_token': next
-        //   }
-        //   data = await clientV3.get(`tweets/search/recent`,params);
-        //   next = data.meta.next_token
-        // }
+        else if(relevancy_next){
+          console.log('i =',i)
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+            'max_results': 100,
+            'sort_order': 'relevancy',
+            'media.fields': 'url',
+            'user.fields': 'created_at,location,verified,profile_image_url',
+            'expansions': 'attachments.media_keys,author_id',
+            'next_token': relevancy_next
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          relevancy_next = data.meta.next_token
+        }
+        else if(change_sort_order){
+          console.log('first next')
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+            'max_results': 100,
+            'media.fields': 'url',
+            'user.fields': 'created_at,location,verified,profile_image_url',
+            'expansions': 'attachments.media_keys,author_id',
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          next = data.meta.next_token
+          change_sort_order = false
+        }
+        else if(next && tweeType.size<=1000){
+          console.log('next =',i)
+          let params = {
+            'query': queryTemp2,
+            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+            'max_results': 100,
+            'media.fields': 'url',
+            'user.fields': 'created_at,location,verified,profile_image_url',
+            'expansions': 'attachments.media_keys,author_id',
+            'next_token': next
+          }
+          data = await clientV3.get(`tweets/search/recent`,params);
+          next = data.meta.next_token
+        }
         else{
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
           break;
