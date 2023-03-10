@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
 const { response } = require('express');
+const summarize  = require('summarize');
 
 // const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
 // const { trusted } = require('mongoose');
@@ -79,6 +80,10 @@ router.get('/tweets', async (req, res, next) => {
     const collect = [];
     const media_keys_collect = [];
     const media_keys_url = [];
+    const user_verify = [];
+    const user_location = [];
+    const user_created = [];
+    const tweet_collect = [];
     // default i=1
     if(type == 1){
       console.log("init")
@@ -88,6 +93,7 @@ router.get('/tweets', async (req, res, next) => {
           'max_results': 100,
           'sort_order': 'relevancy',
           'media.fields': 'url',
+          'user.fields': 'created_at,location,verified,profile_image_url',
           'expansions': 'attachments.media_keys',
         }
         // old is clientV2 not work with -rt 
@@ -242,6 +248,20 @@ router.get('/tweets', async (req, res, next) => {
             }
           }
         }
+        // user
+        if(data.includes && data.includes.users){
+          for (let tweet of data.includes.users){
+            if (tweet.verified === true) {
+              user_verify.push({username:tweet.username,verified:tweet.verified})
+            } 
+            if (tweet.location) {
+              user_location.push(tweet.location)
+            } 
+            if (tweet.created_at) {
+              user_created.push(tweet.created_at)
+            } 
+          }
+        }
     }
     else{
       for (let i = 1; i<=10; i++) {
@@ -253,7 +273,8 @@ router.get('/tweets', async (req, res, next) => {
             'max_results': 100,
             'sort_order': 'relevancy',
             'media.fields': 'url',
-            'expansions': 'attachments.media_keys',
+            'user.fields': 'created_at,location,verified,profile_image_url',
+            'expansions': 'attachments.media_keys,author_id',
           }
           data = await clientV3.get(`tweets/search/recent`,params);
           relevancy_next = data.meta.next_token
@@ -266,46 +287,49 @@ router.get('/tweets', async (req, res, next) => {
           highestReplyCount = data.data[0].public_metrics.reply_count;
           highestImpressionCount = data.data[0].public_metrics.impression_count;
         }
-        else if(relevancy_next){
-          console.log('i =',i)
-          let params = {
-            'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-            'max_results': 100,
-            'sort_order': 'relevancy',
-            'media.fields': 'url',
-            'expansions': 'attachments.media_keys',
-            'next_token': relevancy_next
-          }
-          data = await clientV3.get(`tweets/search/recent`,params);
-          relevancy_next = data.meta.next_token
-        }
-        else if(change_sort_order){
-          console.log('first next')
-          let params = {
-            'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-            'max_results': 100,
-            'media.fields': 'url',
-            'expansions': 'attachments.media_keys',
-          }
-          data = await clientV3.get(`tweets/search/recent`,params);
-          next = data.meta.next_token
-          change_sort_order = false
-        }
-        else if(next && tweeType.size<=1000){
-          console.log('next =',i)
-          let params = {
-            'query': queryTemp2,
-            'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
-            'max_results': 100,
-            'media.fields': 'url',
-            'expansions': 'attachments.media_keys',
-            'next_token': next
-          }
-          data = await clientV3.get(`tweets/search/recent`,params);
-          next = data.meta.next_token
-        }
+        // else if(relevancy_next){
+        //   console.log('i =',i)
+        //   let params = {
+        //     'query': queryTemp2,
+        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+        //     'max_results': 100,
+        //     'sort_order': 'relevancy',
+        //     'media.fields': 'url',
+        //     'user.fields': 'created_at,location,verified,profile_image_url',
+        //     'expansions': 'attachments.media_keys,author_id',
+        //     'next_token': relevancy_next
+        //   }
+        //   data = await clientV3.get(`tweets/search/recent`,params);
+        //   relevancy_next = data.meta.next_token
+        // }
+        // else if(change_sort_order){
+        //   console.log('first next')
+        //   let params = {
+        //     'query': queryTemp2,
+        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+        //     'max_results': 100,
+        //     'media.fields': 'url',
+        //     'user.fields': 'created_at,location,verified,profile_image_url',
+        //     'expansions': 'attachments.media_keys,author_id',
+        //   }
+        //   data = await clientV3.get(`tweets/search/recent`,params);
+        //   next = data.meta.next_token
+        //   change_sort_order = false
+        // }
+        // else if(next && tweeType.size<=1000){
+        //   console.log('next =',i)
+        //   let params = {
+        //     'query': queryTemp2,
+        //     'tweet.fields': "created_at,lang,public_metrics,source,context_annotations,possibly_sensitive,entities,referenced_tweets,attachments",
+        //     'max_results': 100,
+        //     'media.fields': 'url',
+        //     'user.fields': 'created_at,location,verified,profile_image_url',
+        //     'expansions': 'attachments.media_keys,author_id',
+        //     'next_token': next
+        //   }
+        //   data = await clientV3.get(`tweets/search/recent`,params);
+        //   next = data.meta.next_token
+        // }
         else{
           console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> break; ",i)
           break;
@@ -313,8 +337,11 @@ router.get('/tweets', async (req, res, next) => {
         
         tweeType.size = tweeType.size + data.data.length
         //here loop prepro
+        // const tweets_temp = data.data.map(tweet => tweet.text);
+        // if(i===1){console.log(tweets_temp)}
+        // const cleanedTweets = tweets_temp.map(tweet => tweet.replace(/(?:https?|ftp):\/\/[\n\S]+/g, '').replace(/&amp;/g, '&'));
         for (let tweet of data.data){
-
+          tweet_collect.push(tweet.text)
           let row = [
             tweet.id,
             tweet.text,
@@ -471,6 +498,20 @@ router.get('/tweets', async (req, res, next) => {
             }
           }
         }
+        // user 
+        if(data.includes && data.includes.users){
+          for (let tweet of data.includes.users){
+            if (tweet.verified === true) {
+              user_verify.push({username:tweet.username,verified:tweet.verified})
+            } 
+            if (tweet.location) {
+              user_location.push(tweet.location)
+            } 
+            if (tweet.created_at) {
+              user_created.push(tweet.created_at)
+            } 
+          }
+        }
       }
     }
     // --------------------------------------------------------------------------------------------------------------------
@@ -562,7 +603,6 @@ router.get('/tweets', async (req, res, next) => {
     }
     
     let mentionObj = Object.keys(mentionCount).map(mentionText => {
-      // return { text: "@" + mentionText, value: mentionCount[mentionText] };
       return { text: mentionText, value: mentionCount[mentionText] };
     });
   
@@ -604,8 +644,7 @@ router.get('/tweets', async (req, res, next) => {
     //   }
     // }
     // --------------------------------------------------------------------------------------------------------------------
-  // if(type==2){
-    // Sort collect data by value
+    // Sort collect data by value #content description
     collect.sort((a, b) => b.count - a.count);
 
     // Sort each entity by value
@@ -624,7 +663,7 @@ router.get('/tweets', async (req, res, next) => {
         // domain.top5Entities = domain.entities.slice(0, 5);
         domain.entities = domain.entities.slice(0, 5);
     });
-
+    // --------------------------------------------------------------------------------------------------------------------
     if(type==2){
       // console.log(">>>>>>>>>");
       // const person_collect = []
@@ -695,10 +734,67 @@ router.get('/tweets', async (req, res, next) => {
     const Top10merge_media = merge_media.slice(0, 10);
 
     // --------------------------------------------------------------------------------------------------------------------
+    // summarry
     tweeType.tweet=tweeType.size-tweeType.retweet-tweeType.reply-tweeType.quote
     tweeType.text= tweeType.size - tweeType.media
-    // media_keys_collect
-    // if(type==2){
+    // --------------------------------------------------------------------------------------------------------------------
+    // console.log Zone
+    if(type==2){
+      // console.log(user_verify)
+      // console.log(user_location)
+      const country_list = ["Afghanistan","Albania","Algeria","Andorra","Angola","Anguilla","Antigua &amp; Barbuda","Argentina"
+      ,"Armenia","Aruba","Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium"
+      ,"Belize","Benin","Bermuda","Bhutan","Bolivia","Bosnia &amp; Herzegovina","Botswana","Brazil","British Virgin Islands"
+      ,"Brunei","Bulgaria","Burkina Faso","Burundi","Cambodia","Cameroon","Cape Verde","Cayman Islands","Chad","Chile","China"
+      ,"Colombia","Congo","Cook Islands","Costa Rica","Cote D Ivoire","Croatia","Cruise Ship","Cuba","Cyprus","Czech Republic"
+      ,"Denmark","Djibouti","Dominica","Dominican Republic","Ecuador","Egypt","El Salvador","Equatorial Guinea","Estonia","Ethiopia"
+      ,"Falkland Islands","Faroe Islands","Fiji","Finland","France","French Polynesia","French West Indies","Gabon","Gambia","Georgia"
+      ,"Germany","Ghana","Gibraltar","Greece","Greenland","Grenada","Guam","Guatemala","Guernsey","Guinea","Guinea Bissau","Guyana","Haiti"
+      ,"Honduras","Hong Kong","Hungary","Iceland","India","Indonesia","Iran","Iraq","Ireland","Isle of Man","Israel","Italy","Jamaica","Japan"
+      ,"Jersey","Jordan","Kazakhstan","Kenya","Kuwait","Kyrgyz Republic","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein"
+      ,"Lithuania","Luxembourg","Macau","Macedonia","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Mauritania","Mauritius","Mexico"
+      ,"Moldova","Monaco","Mongolia","Montenegro","Montserrat","Morocco","Mozambique","Namibia","Nepal","Netherlands","Netherlands Antilles"
+      ,"New Caledonia","New Zealand","Nicaragua","Niger","Nigeria","Norway","Oman","Pakistan","Palestine","Panama","Papua New Guinea","Paraguay"
+      ,"Peru","Philippines","Poland","Portugal","Puerto Rico","Qatar","Reunion","Romania","Russia","Rwanda","Saint Pierre &amp; Miquelon","Samoa"
+      ,"San Marino","Satellite","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia","Slovenia","South Africa","South Korea"
+      ,"Spain","Sri Lanka","St Kitts &amp; Nevis","St Lucia","St Vincent","St. Lucia","Sudan","Suriname","Swaziland","Sweden","Switzerland","Syria","Taiwan"
+      ,"Tajikistan","Tanzania","Thailand","Timor L'Este","Togo","Tonga","Trinidad &amp; Tobago","Tunisia","Turkey","Turkmenistan","Turks &amp; Caicos","Uganda"
+      ,"Ukraine","United Arab Emirates","United Kingdom","Uruguay","Uzbekistan","Venezuela","Vietnam","Virgin Islands (US)","Yemen","Zambia","Zimbabwe","england"];
+
+      // regular expression to match country names
+      const countryRegex = new RegExp(country_list.join('|'), 'i');
+
+      // array to store matched country names
+      const countryArray = [];
+
+      // loop over each data point and extract country name
+      for (const d of user_location) {
+        const match = d.match(countryRegex);
+        if (match) {
+          countryArray.push(match[0]);
+        }
+      }
+
+      // console.log(countryArray);
+      let uniqueArr = countryArray.filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
+      
+      // console.log(uniqueArr);
+
+      // user created
+      const yearsAgo = {};
+      user_created.forEach(date => {
+        const year = new Date(date).getFullYear();
+        if (yearsAgo[year]) {
+          yearsAgo[year]++;
+        } else {
+          yearsAgo[year] = 1;
+        }
+      });
+      // console.log(yearsAgo);
+      
+    }
     //   console.log(`Latest created_at: ${latestTimestamp}`);
     //   console.log(`Oldest created_at: ${oldestTimestamp}`);
       // console.log(top5mention)
@@ -708,7 +804,6 @@ router.get('/tweets', async (req, res, next) => {
       // console.log("mentionlist",mentionlist)
       // console.log(">>>")
       // console.log("accountData",accData)
-
     // }
     // --------------------------------------------------------------------------------------------------------------------
     let dataplus = {}
@@ -718,7 +813,6 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['lang'] = langArrMapping
     dataplus['word'] = output
     dataplus['hashtag'] = filterhashtag
-    // dataplus['mention'] = top5mention
     dataplus['mention'] = accData
     dataplus['url'] = urltop
     dataplus['context'] = context_DomainArr
@@ -843,5 +937,37 @@ router.get('/all', async (req, res) => {
   const data = await Trend.find();
   res.send(data);
 });
+
+router.get('/xxx', async (req, res) => {
+
+  client.get('search/tweets', params, function(error, tweets, response) {
+    if (!error) {
+      // Loop through the tweets and extract the geolocation data
+      for (let i = 0; i < tweets.statuses.length; i++) {
+        const tweet = tweets.statuses[i];
+        if (tweet.geo) {
+          const lat = tweet.geo.coordinates[0];
+          const long = tweet.geo.coordinates[1];
+          console.log(`Tweet ${tweet.id_str} was posted at (${lat}, ${long})`);
+        }
+      }
+    } else {
+      console.error(error);
+    }
+  });
+});
+
+
+const stream = client.stream('statuses/filter', {track: 'javascript'});
+
+// Listen for stream events
+stream.on('data', tweet => {
+  io.emit('tweet', tweet);
+});
+
+stream.on('error', error => {
+  console.error(error);
+});
+
 
 module.exports = router;
