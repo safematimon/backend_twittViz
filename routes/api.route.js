@@ -739,7 +739,7 @@ router.get('/tweets', async (req, res, next) => {
     tweeType.text= tweeType.size - tweeType.media
     // --------------------------------------------------------------------------------------------------------------------
     // console.log Zone
-    if(type==2){
+    // if(type==2){
       // console.log(user_verify)
       // console.log(user_location)
       const country_list = ["Afghanistan","Albania","Algeria","Andorra","Angola","Anguilla","Antigua &amp; Barbuda","Argentina"
@@ -794,7 +794,7 @@ router.get('/tweets', async (req, res, next) => {
       });
       // console.log(yearsAgo);
       
-    }
+    // }
     //   console.log(`Latest created_at: ${latestTimestamp}`);
     //   console.log(`Oldest created_at: ${oldestTimestamp}`);
       // console.log(top5mention)
