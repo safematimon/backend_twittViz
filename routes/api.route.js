@@ -825,6 +825,7 @@ router.get('/tweets', async (req, res, next) => {
     dataplus['Domain4'] = top5Domains[3]
     dataplus['csvData'] = csvData
     dataplus['media'] = Top10merge_media
+    dataplus['user_location'] = uniqueArr
     res.send(dataplus);
   }catch(error){
     console.log(error)
@@ -936,37 +937,6 @@ router.get('/test-cron', async (req, res, next) => {
 router.get('/all', async (req, res) => {
   const data = await Trend.find();
   res.send(data);
-});
-
-router.get('/xxx', async (req, res) => {
-
-  client.get('search/tweets', params, function(error, tweets, response) {
-    if (!error) {
-      // Loop through the tweets and extract the geolocation data
-      for (let i = 0; i < tweets.statuses.length; i++) {
-        const tweet = tweets.statuses[i];
-        if (tweet.geo) {
-          const lat = tweet.geo.coordinates[0];
-          const long = tweet.geo.coordinates[1];
-          console.log(`Tweet ${tweet.id_str} was posted at (${lat}, ${long})`);
-        }
-      }
-    } else {
-      console.error(error);
-    }
-  });
-});
-
-
-const stream = client.stream('statuses/filter', {track: 'javascript'});
-
-// Listen for stream events
-stream.on('data', tweet => {
-  io.emit('tweet', tweet);
-});
-
-stream.on('error', error => {
-  console.error(error);
 });
 
 
