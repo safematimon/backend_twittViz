@@ -9,13 +9,13 @@ require('dotenv').config();
 
 const http = require('http')
 const path = require('path')
-const socketIO = require('socket.io')
+// const socketIO = require('socket.io')
 const PORT = 4000
 
 // const server = http.createServer(app)
 // const io = socketIO(server)
 const server = http.createServer(app);
-const io = socketIO(server)
+// const io = socketIO(server)
 
 const token = process.env.BEARER_TOKEN;
 const rulesURL = 'https://api.twitter.com/2/tweets/search/stream/rules';
@@ -185,18 +185,18 @@ app.use('/api', require('./routes/api.route'));
 // //     streamConnect(0);
 // // })();
 
-io.on('connection', (socket) => {
-  console.log(`New client connected ${socket.id}`);
+// io.on('connection', (socket) => {
+//   console.log(`New client connected ${socket.id}`);
 
-  socket.on('disconnect', () => {
-    console.log('Client disconnected');
-  });
+//   socket.on('disconnect', () => {
+//     console.log('Client disconnected');
+//   });
 
-  socket.on('message', (message) => {
-    console.log(`Message received: ${message}`);
-    // io.emit('message', message);
-  });
-});
+//   socket.on('message', (message) => {
+//     console.log(`Message received: ${message}`);
+//     // io.emit('message', message);
+//   });
+// });
 
 
 server.listen(PORT,()=> {
