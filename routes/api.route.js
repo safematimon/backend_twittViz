@@ -925,6 +925,35 @@ router.get('/update-trends', async (req, res, next) => {
   }
 });
 
+router.get('/update-trends2', async (req, res, next) => {
+  try {
+    const id = 1
+    const data = await client.get('trends/place.json', {id})
+
+    const date = new Date();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear().toString();
+    const formattedDate = `${hours}/${day}/${month}/${year}`;
+    
+    const datatemp = data[0].trends
+
+    datatemp.forEach((item, index) => {
+      item.time = formattedDate;
+      item.no = index+1;
+    });
+
+    Trend.insertMany(datatemp)
+    console.log("Data inserted",new Date(),">",formattedDate)  // Success
+    
+    res.status(200).send("inserted");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('Error updating trends');
+  }
+});
+
 router.get('/test-cron', async (req, res, next) => {
   try{
     console.log('>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> test-cron ',new Date(),">",formattedDate);
