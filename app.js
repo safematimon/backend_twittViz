@@ -30,8 +30,8 @@ mongoose.set('strictQuery', false);
 // // mongoose.connect('mongodb+srv://admin:1234@cluster0.hv7pxi6.mongodb.net/test?retryWrites=true&w=majority')
 // // new 
 // mongoose.connect('mongodb+srv://admin:1234@cluster0.yzkibdo.mongodb.net/')
-mongoose.connect('mongodb+srv://admin:1234@cluster0.yzkibdo.mongodb.net/?retryWrites=true&w=majority')
-// mongoose.connect('mongodb+srv://admin:1234@cluster0.hv7pxi6.mongodb.net/test?retryWrites=true&w=majority')
+// mongoose.connect('mongodb+srv://admin:1234@cluster0.yzkibdo.mongodb.net/?retryWrites=true&w=majority')
+mongoose.connect('mongodb+srv://admin:1234@cluster0.hv7pxi6.mongodb.net/test?retryWrites=true&w=majority')
         .then(() => console.log('connect dai leaw'))
         .catch((err) => console.error(err));
 
