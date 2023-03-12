@@ -206,8 +206,11 @@ app.use('/api', require('./routes/api.route'));
 //   });
 // })
 
-server.listen(PORT,()=> {
-  console.log(`Listening on ${PORT}`)
-})
+// server.listen(PORT,()=> {
+  // console.log(`Listening on ${PORT}`)
+// })
 
 
+app.listen(4000, function() {
+  console.log("Server started on port 4000");
+});
