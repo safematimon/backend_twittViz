@@ -6,7 +6,7 @@ const mongoose = require('mongoose');
 const Trend = require('../models/Trend');
 var cron = require('node-cron');
 const { response } = require('express');
-const summarize  = require('summarize');
+// const summarize  = require('summarize');
 
 // const { UNSAFE_convertRoutesToDataRoutes } = require('@remix-run/router');
 // const { trusted } = require('mongoose');
@@ -937,6 +937,67 @@ router.get('/test-cron', async (req, res, next) => {
 router.get('/all', async (req, res) => {
   const data = await Trend.find();
   res.send(data);
+});
+
+
+function getRandomInt(max) {
+  return Math.floor(Math.random() * max);
+}
+
+
+
+const log=[]
+router.get('/10min', async (req, res, next) => {
+  try{
+    // const query = req.query.query
+    // const queryTemp = query.replace(/[ ]/g,"+")
+    // const queryTemp2 = queryTemp+" -is:retweet"
+
+    let params = {
+      // 'query': queryTemp2,
+      'query': "blackpink",
+      'granularity': 'day'
+    }
+    let params3 = {
+      // 'query': queryTemp2,
+      'query': "blackpink",
+      'tweet.fields': "created_at,lang,possibly_sensitive,entities,referenced_tweets,attachments",
+      'max_results': 100,
+      'sort_order': 'relevancy',
+      'media.fields': 'url',
+      'user.fields': 'created_at,location,verified,profile_image_url',
+      'expansions': 'attachments.media_keys',
+    }
+    // data = await clientV3.get(`tweets/search/recent`,params3);
+    data = await clientV3.get(`tweets/counts/recent`,params);
+
+    let tweet=0
+    let retweet=0
+    let quoted=0
+
+    // for (let tweet of data.data){
+    //   console.log(tweet)
+    //   if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='retweeted'){
+    //     retweet++;
+    //   }
+    //   if(tweet.referenced_tweets && tweet.referenced_tweets[0].type==='quoted'){
+    //     quoted++;
+    //   }
+    // }
+    // tweet=100-retweet
+    const test = data.meta.total_tweet_count
+    console.log(">",test)
+
+    const now = new Date();
+    const time = now.toLocaleTimeString('en-US', {hour12: true, hour: 'numeric', minute: 'numeric', second: 'numeric'});
+    // let temp = {time:time,tweet:getRandomInt(10),retweet:getRandomInt(10)}
+    let temp = {time:time,tweet:test,retweet:retweet}
+    // console.log(tweet,":",retweet)
+    res.send(temp);
+  }catch(error){
+    console.log(error)
+    next(error)
+  }
 });
 
 
