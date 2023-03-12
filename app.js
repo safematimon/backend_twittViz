@@ -204,8 +204,8 @@ app.use('/api', require('./routes/api.route'));
 //   });
 // })
 
-// server.listen(PORT,()=> {
-//   console.log(`Listening on ${PORT}`)
-// })
+server.listen(PORT,()=> {
+  console.log(`Listening on ${PORT}`)
+})
 
 

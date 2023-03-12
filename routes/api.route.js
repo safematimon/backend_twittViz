@@ -940,11 +940,6 @@ router.get('/all', async (req, res) => {
 });
 
 
-function getRandomInt(max) {
-  return Math.floor(Math.random() * max);
-}
-
-
 
 const log=[]
 router.get('/10min', async (req, res, next) => {
