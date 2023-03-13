@@ -12,5 +12,5 @@
             "dest":"/"
         }
     ],
-    "rewrites": [{ "source": "/routes/(.*)", "destination": "/routes" }]
+    "rewrites": [{ "source": "/api/(.*)", "destination": "/api" }]
 }

@@ -42,7 +42,7 @@ app.get('/', async (req, res, next) => {
   res.send({ message: 'root path Awesome it works 🐻' });
 });
 
-// app.use('/api', require('./routes/api.route'));
+app.use('/api', require('./routes/api.route'));
 
 
 // // ========================================================  
