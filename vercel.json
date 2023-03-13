@@ -6,7 +6,7 @@
             "use":"@now/node"
         }
     ],
-    "route":[
+    "routes":[
         {
         "src" : "/(.*)",
         "dest" : "./routes/api.route.js"
