@@ -42,7 +42,7 @@ app.get('/', async (req, res, next) => {
   res.send({ message: 'root path Awesome it works 🐻' });
 });
 
-app.use('/api', require('./routes/api.route'));
+// app.use('/api', require('./routes/api.route'));
 
 
 // // ========================================================  
@@ -207,6 +207,6 @@ app.use('/api', require('./routes/api.route'));
 // })
 
 
-app.listen(4000, function() {
+server.listen(4000, function() {
   console.log("Server started on port 4000");
 });
